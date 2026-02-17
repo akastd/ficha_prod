@@ -141,10 +141,10 @@
 
     if (dados.topVendedor) {
       nomeEl.textContent = dados.topVendedor;
-      statsEl.textContent = `${dados.topVendedorTotal || 0} ${(dados.topVendedorTotal || 0) === 1 ? 'venda' : 'vendas'}`;
+      statsEl.textContent = `${dados.topVendedorTotal || 0} ${(dados.topVendedorTotal || 0) === 1 ? 'ficha' : 'fichas'}`;
     } else {
       nomeEl.textContent = 'Nenhum vendedor';
-      statsEl.textContent = '0 vendas';
+      statsEl.textContent = '0 fichas';
     }
   }
 
@@ -256,7 +256,7 @@
               <span class="ranking-badge ${taxaClass}">${taxaEntrega}% entrega</span>
             </div>
             <div class="ranking-stats">
-              <span><i class="fas fa-file-alt"></i> ${v.totalPedidos || 0} pedidos</span>
+              <span><i class="fas fa-file-alt"></i> ${v.totalPedidos || 0} fichas</span>
               <span><i class="fas fa-tshirt"></i> ${formatarNumero(v.totalItens || 0)} itens</span>
               <span><i class="fas fa-check-circle"></i> ${Math.min(v.entregues || 0, v.totalPedidos || 0)} entregues</span>
               <span><i class="fas fa-clock"></i> ${v.pendentes || 0} pendentes</span>
@@ -348,7 +348,7 @@
               <span class="ranking-value">${formatarNumero(m.totalItens || 0)} itens</span>
             </div>
             <div class="ranking-stats">
-              <span><i class="fas fa-file-alt"></i> ${m.totalPedidos || 0} pedidos</span>
+              <span><i class="fas fa-file-alt"></i> ${m.totalPedidos || 0} fichas</span>
               <span><i class="fas fa-percentage"></i> ${porcentagem.toFixed(1)}% do total</span>
             </div>
             <div class="ranking-bar">
@@ -424,7 +424,7 @@
         <div class="mini-ranking-item">
           <span class="mini-pos">${i + 1}º</span>
           <span class="mini-name">${escapeHtml(c.cliente)}</span>
-          <span class="mini-value">${c.total_pedidos || c.totalPedidos || 0} pedidos</span>
+          <span class="mini-value">${c.total_pedidos || c.totalPedidos || 0} fichas</span>
         </div>
       `).join('');
 
@@ -637,8 +637,8 @@
         <div class="data-geracao">Gerado em: ${dataGeracao}</div>
     </div>
     <div class="stats-grid">
-        <div class="stat-card green"><div class="label">Pedidos Entregues</div><div class="value">${entregues}</div></div>
-        <div class="stat-card orange"><div class="label">Pedidos Pendentes</div><div class="value">${pendentes}</div></div>
+        <div class="stat-card green"><div class="label">Fichas Entregues</div><div class="value">${entregues}</div></div>
+        <div class="stat-card orange"><div class="label">Fichas Pendentes</div><div class="value">${pendentes}</div></div>
         <div class="stat-card blue"><div class="label">Itens Confeccionados</div><div class="value">${formatarNumero(relatorioAtual.itensConfeccionados || 0)}</div></div>
         <div class="stat-card purple"><div class="label">Novos Clientes</div><div class="value">${relatorioAtual.novosClientes || 0}</div></div>
     </div>
@@ -648,12 +648,12 @@
             <div class="info-box">
                 <div class="title">🏆 Vendedor Destaque</div>
                 <div class="content">${relatorioAtual.topVendedor || 'Nenhum'}</div>
-                <div class="subtitle">${relatorioAtual.topVendedorTotal || 0} vendas no período</div>
+                <div class="subtitle">${relatorioAtual.topVendedorTotal || 0} fichas no período</div>
             </div>
             <div class="info-box taxa-box">
                 <div class="title">📈 Taxa de Entrega</div>
                 <div class="taxa-valor">${taxa}%</div>
-                <div class="taxa-legenda">${entregues} de ${total} pedidos entregues</div>
+                <div class="taxa-legenda">${entregues} de ${total} fichas entregues</div>
             </div>
         </div>
     </div>
@@ -714,9 +714,9 @@
 
       const summaryData = [
         ['Métrica', 'Total'],
-        ['Pedidos Entregues', String(entregues)],
-        ['Pedidos Pendentes', String(pendentes)],
-        ['Total de Pedidos', String(total)],
+        ['Fichas Entregues', String(entregues)],
+        ['Fichas Pendentes', String(pendentes)],
+        ['Total de Fichas', String(total)],
         ['Taxa de Entrega', `${taxa}%`],
         ['Itens Confeccionados', String(relatorioAtual.itensConfeccionados || 0)],
         ['Novos Clientes', String(relatorioAtual.novosClientes || 0)]
@@ -743,7 +743,7 @@
         ]);
 
       doc.autoTable({
-        head: [['Vendedor', 'Pedidos', 'Itens', 'Entregues', 'Taxa']],
+        head: [['Vendedor', 'Fichas', 'Itens', 'Entregues', 'Taxa']],
         body: topVendedores,
         theme: 'striped',
         headStyles: { fillColor: [33, 97, 140] }
@@ -758,7 +758,7 @@
         ]);
 
       doc.autoTable({
-        head: [['Material', 'Pedidos', 'Itens']],
+        head: [['Material', 'Fichas', 'Itens']],
         body: topMateriais,
         theme: 'striped',
         headStyles: { fillColor: [33, 97, 140] }
@@ -931,9 +931,9 @@
 
     // Dados das métricas
     const metricas = [
-      ['Pedidos Entregues', dados.entregues],
-      ['Pedidos Pendentes', dados.pendentes],
-      ['Total de Pedidos', dados.total],
+      ['Fichas Entregues', dados.entregues],
+      ['Fichas Pendentes', dados.pendentes],
+      ['Total de Fichas', dados.total],
       ['Taxa de Entrega', `${dados.taxa}%`],
       ['Itens Confeccionados', dados.itensConfeccionados],
       ['Novos Clientes', dados.novosClientes]
@@ -986,7 +986,7 @@
 
     worksheet.addRow([]);
     addStyledRowRange(worksheet, 18, 'A', 'B', ['Nome', dados.topVendedor], { boldFirst: true });
-    addStyledRowRange(worksheet, 19, 'A', 'B', ['Total de Vendas', dados.topVendedorTotal], { boldFirst: true });
+    addStyledRowRange(worksheet, 19, 'A', 'B', ['Total de Fichas', dados.topVendedorTotal], { boldFirst: true });
 
     // ==================== TABELA 2: VENDEDORES (Colunas D-I) ====================
 
@@ -1004,7 +1004,7 @@
 
     // Cabeçalho
     const headerVend = worksheet.getRow(3);
-    const colsVend = ['Vendedor', 'Pedidos', 'Itens', 'Entregues', 'Pendentes', 'Taxa Entrega'];
+    const colsVend = ['Vendedor', 'Fichas', 'Itens', 'Entregues', 'Pendentes', 'Taxa Entrega'];
     colsVend.forEach((col, idx) => {
       headerVend.getCell(4 + idx).value = col;
       headerVend.getCell(4 + idx).style = {
@@ -1090,7 +1090,7 @@
 
     // Cabeçalho
     const headerMat = worksheet.getRow(3);
-    const colsMat = ['Material', 'Pedidos', 'Itens', '% do Total'];
+    const colsMat = ['Material', 'Fichas', 'Itens', '% do Total'];
     colsMat.forEach((col, idx) => {
       headerMat.getCell(11 + idx).value = col;
       headerMat.getCell(11 + idx).style = {

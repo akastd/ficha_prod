@@ -336,6 +336,12 @@ body.preview-modal-open {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  width: min(360px, 42vw);
+}
+
+.preview-modal-actions-spacer {
+  flex: 1;
+  min-width: 20px;
 }
 
 .preview-modal-title-wrap {
@@ -400,6 +406,27 @@ body.preview-modal-open {
   border-color: #3b82f6;
 }
 
+.preview-modal-duplicate {
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #86efac;
+  background: #ecfdf5;
+  color: #15803d;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.preview-modal-duplicate:hover {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
 .preview-modal-body {
   flex: 1;
   min-height: 0;
@@ -444,6 +471,11 @@ body.preview-modal-open {
 }
 
 .preview-modal-print:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.preview-modal-duplicate:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -518,7 +550,8 @@ body.preview-modal-open {
     padding: 10px 12px;
   }
 
-  .preview-modal-print span {
+  .preview-modal-print span,
+  .preview-modal-duplicate span {
     display: none;
   }
 

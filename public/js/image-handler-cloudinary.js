@@ -230,7 +230,11 @@
 
     if (img.publicId && window.CloudinaryUpload) {
       try {
-        await CloudinaryUpload.deleteImage(img.publicId);
+        const params = new URLSearchParams(window.location.search);
+        const fichaIdAtual = params.get('editar');
+        await CloudinaryUpload.deleteImage(img.publicId, {
+          excludeFichaId: fichaIdAtual || null
+        });
       } catch (error) {}
     }
 

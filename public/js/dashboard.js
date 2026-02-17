@@ -12,8 +12,12 @@
   let iframeVisualizacao = null;
   let tituloModalVisualizacao = null;
   let botaoImprimirModal = null;
+  let botaoDuplicarModal = null;
   let loadingModalVisualizacao = null;
   let timeoutLoadingModal = null;
+  let fichaVisualizadaId = null;
+  let duplicandoFichaModal = false;
+  const PREVIEW_READY_MESSAGE = 'ficha-preview-ready';
   let paginaAtual = 1;
   const itensPorPagina = 10;
 
@@ -461,6 +465,11 @@
             <span class="preview-modal-subtitle">Ficha <span class="preview-modal-ficha-id">#-</span></span>
           </div>
           <div class="preview-modal-actions">
+            <button type="button" class="preview-modal-duplicate" title="Duplicar ficha">
+              <i class="fas fa-copy"></i>
+              <span>Duplicar ficha</span>
+            </button>
+            <span class="preview-modal-actions-spacer" aria-hidden="true"></span>
             <button type="button" class="preview-modal-print" title="Imprimir ficha">
               <i class="fas fa-print"></i>
               <span>Imprimir ficha</span>
@@ -473,7 +482,7 @@
         <div class="preview-modal-body">
           <div class="preview-modal-loading">
             <i class="fas fa-spinner fa-spin"></i>
-            <span>Carregando preview...</span>
+            <span>Carregando Ficha...</span>
           </div>
           <iframe class="preview-modal-iframe" title="Visualização da ficha" loading="lazy"></iframe>
         </div>
@@ -486,6 +495,7 @@
     iframeVisualizacao = modal.querySelector('.preview-modal-iframe');
     tituloModalVisualizacao = modal.querySelector('.preview-modal-ficha-id');
     botaoImprimirModal = modal.querySelector('.preview-modal-print');
+    botaoDuplicarModal = modal.querySelector('.preview-modal-duplicate');
     loadingModalVisualizacao = modal.querySelector('.preview-modal-loading');
 
     const overlay = modal.querySelector('.preview-modal-overlay');
@@ -493,8 +503,10 @@
     overlay?.addEventListener('click', fecharModalVisualizacao);
     btnClose?.addEventListener('click', fecharModalVisualizacao);
     botaoImprimirModal?.addEventListener('click', imprimirFichaModal);
-    iframeVisualizacao?.addEventListener('load', () => setLoadingPreview(false));
+    botaoDuplicarModal?.addEventListener('click', duplicarFichaModal);
+    iframeVisualizacao?.addEventListener('load', () => {});
     iframeVisualizacao?.addEventListener('error', () => setLoadingPreview('error'));
+    window.addEventListener('message', onPreviewFrameMessage);
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && modalVisualizacao && modalVisualizacao.style.display !== 'none') {
@@ -507,6 +519,8 @@
     if (!modalVisualizacao || !iframeVisualizacao) initModalVisualizacao();
     if (!modalVisualizacao || !iframeVisualizacao) return;
 
+    fichaVisualizadaId = id;
+    duplicandoFichaModal = false;
     setLoadingPreview(true);
     iframeVisualizacao.src = `index.html?visualizar=${id}`;
     if (tituloModalVisualizacao) tituloModalVisualizacao.textContent = `#${id}`;
@@ -518,8 +532,20 @@
     if (!modalVisualizacao || !iframeVisualizacao) return;
     modalVisualizacao.style.display = 'none';
     iframeVisualizacao.src = 'about:blank';
+    fichaVisualizadaId = null;
+    duplicandoFichaModal = false;
     setLoadingPreview(false);
     document.body.classList.remove('preview-modal-open');
+  }
+
+  function onPreviewFrameMessage(event) {
+    if (!iframeVisualizacao || event.source !== iframeVisualizacao.contentWindow) return;
+
+    const data = event.data;
+    if (!data || data.type !== PREVIEW_READY_MESSAGE) return;
+
+    if (!modalVisualizacao || modalVisualizacao.style.display === 'none') return;
+    setLoadingPreview(false);
   }
 
   function setLoadingPreview(loading) {
@@ -534,7 +560,8 @@
 
     modalVisualizacao.classList.toggle('is-loading', isLoading);
     modalVisualizacao.classList.toggle('has-error', isError);
-    if (botaoImprimirModal) botaoImprimirModal.disabled = isLoading;
+    if (botaoImprimirModal) botaoImprimirModal.disabled = isLoading || duplicandoFichaModal;
+    if (botaoDuplicarModal) botaoDuplicarModal.disabled = isLoading || duplicandoFichaModal;
 
     if (loadingModalVisualizacao) {
       loadingModalVisualizacao.style.display = isLoading ? 'flex' : 'none';
@@ -575,6 +602,101 @@
       try {
         iframeVisualizacao.contentWindow.print();
       } catch {}
+    }
+  }
+
+  function mapearFichaBancoParaEnvio(fichaBanco) {
+    if (!fichaBanco || typeof fichaBanco !== 'object') return null;
+
+    const mapa = {
+      data_inicio: 'dataInicio',
+      numero_venda: 'numeroVenda',
+      data_entrega: 'dataEntrega',
+      cor_material: 'corMaterial',
+      acabamento_manga: 'acabamentoManga',
+      largura_manga: 'larguraManga',
+      cor_acabamento_manga: 'corAcabamentoManga',
+      cor_gola: 'corGola',
+      acabamento_gola: 'acabamentoGola',
+      largura_gola: 'larguraGola',
+      cor_peitilho_interno: 'corPeitilhoInterno',
+      cor_peitilho_externo: 'corPeitilhoExterno',
+      abertura_lateral: 'aberturaLateral',
+      cor_abertura_lateral: 'corAberturaLateral',
+      reforco_gola: 'reforcoGola',
+      cor_reforco: 'corReforco',
+      filete_local: 'fileteLocal',
+      filete_cor: 'fileteCor',
+      faixa_local: 'faixaLocal',
+      faixa_cor: 'faixaCor',
+      cor_sublimacao: 'corSublimacao',
+      observacoes_html: 'observacoesHtml',
+      observacoes_plain_text: 'observacoesPlainText',
+      imagens_data: 'imagensData',
+      imagem_data: 'imagemData'
+    };
+
+    const dados = {};
+    Object.entries(fichaBanco).forEach(([chave, valor]) => {
+      const chaveDestino = mapa[chave] || chave;
+      dados[chaveDestino] = valor;
+    });
+
+    if (typeof dados.produtos === 'string') {
+      try {
+        dados.produtos = JSON.parse(dados.produtos);
+      } catch {
+        dados.produtos = [];
+      }
+    }
+
+    return dados;
+  }
+
+  async function duplicarFichaModal() {
+    if (duplicandoFichaModal) return;
+    if (!fichaVisualizadaId || Number.isNaN(Number(fichaVisualizadaId))) {
+      mostrarErro('Não foi possível identificar a ficha para duplicar');
+      return;
+    }
+
+    duplicandoFichaModal = true;
+    setLoadingPreview(false);
+
+    try {
+      let dadosDuplicados = null;
+      const win = iframeVisualizacao?.contentWindow;
+
+      if (win && typeof win.coletarFicha === 'function') {
+        dadosDuplicados = win.coletarFicha();
+      }
+
+      if (!dadosDuplicados) {
+        const fichaBanco = await db.buscarFicha(fichaVisualizadaId);
+        dadosDuplicados = mapearFichaBancoParaEnvio(fichaBanco);
+      }
+
+      if (!dadosDuplicados) throw new Error('Dados da ficha indisponíveis');
+
+      delete dadosDuplicados.id;
+      if (dadosDuplicados.numeroVenda) {
+        dadosDuplicados.numeroVenda = `${dadosDuplicados.numeroVenda}-COPIA`;
+      }
+
+      const novoId = await db.salvarFicha(dadosDuplicados);
+      await carregarFichas();
+      aplicarFiltros();
+      await atualizarEstatisticas();
+      window.location.href = `index.html?editar=${novoId}`;
+    } catch (error) {
+      console.error('Erro ao duplicar ficha pelo modal:', error);
+      mostrarErro('Erro ao duplicar ficha');
+    } finally {
+      duplicandoFichaModal = false;
+      if (modalVisualizacao && modalVisualizacao.style.display !== 'none') {
+        const estaCarregando = modalVisualizacao.classList.contains('is-loading');
+        setLoadingPreview(estaCarregando);
+      }
     }
   }
 

@@ -624,6 +624,16 @@
       window.setImagens(imagensCarregadas);
     }
 
+    // Preencher observacoes cedo para evitar corrida com o preview/impressao.
+    const observacoesInput = document.getElementById('observacoes');
+    if (observacoesInput) {
+      observacoesInput.value = observacoesSalvas;
+    }
+
+    if (window.richTextEditor) {
+      window.richTextEditor.setContent(observacoesSalvas);
+    }
+
     // Mostrar campos condicionais
     setTimeout(() => {
       const acabamentoMangaVal = ficha.acabamentoManga;
@@ -690,15 +700,6 @@
         const faixaCorContainer = document.getElementById('faixaCorContainer');
         if (faixaLocalContainer) faixaLocalContainer.style.display = 'block';
         if (faixaCorContainer) faixaCorContainer.style.display = 'block';
-      }
-
-      const observacoesInput = document.getElementById('observacoes');
-      if (observacoesInput) {
-        observacoesInput.value = observacoesSalvas;
-      }
-
-      if (window.richTextEditor) {
-        window.richTextEditor.setContent(observacoesSalvas);
       }
 
       window.__preenchendoFicha = false;

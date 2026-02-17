@@ -1679,6 +1679,18 @@
 
       if (apenasPreview) {
         document.body.classList.add('preview-impressao');
+        if (window.parent && window.parent !== window) {
+          const params = new URLSearchParams(window.location.search);
+          const visualizarId = params.get('visualizar') || null;
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              window.parent.postMessage({
+                type: 'ficha-preview-ready',
+                fichaId: visualizarId
+              }, window.location.origin);
+            });
+          });
+        }
         return;
       }
 

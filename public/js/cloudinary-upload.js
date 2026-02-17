@@ -244,20 +244,39 @@
   // DELETE IMAGE
   // ═══════════════════════════════════════════════════════════════════
 
-  async function deleteImage(publicId) {
+  async function deleteImage(publicId, options = {}) {
     try {
+      const { excludeFichaId = null } = options;
       const safePublicId = publicId.replace(/\//g, '_SLASH_');
+      const query = excludeFichaId ? `?excludeFichaId=${encodeURIComponent(excludeFichaId)}` : '';
 
-      const response = await fetch(`/api/cloudinary/image/${safePublicId}`, {
+      const response = await fetch(`/api/cloudinary/image/${safePublicId}${query}`, {
         method: 'DELETE'
       });
 
-      if (!response.ok) {
-        throw new Error('Erro ao deletar imagem');
+      const responseData = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        if (responseData.shared) {
+          mostrarAviso('Imagem compartilhada: removida apenas desta ficha. A ficha original não foi alterada.');
+          return { success: true, shared: true };
+        }
+
+        if (responseData.notFound) {
+          mostrarAviso('Imagem removida desta ficha. O arquivo já não existia na nuvem.');
+          return { success: true, notFound: true };
+        }
+
+        mostrarSucesso('Imagem removida com sucesso!');
+        return { success: true };
       }
 
-      mostrarSucesso('Imagem removida com sucesso!');
-      return { success: true };
+      if (response.status === 409 || responseData.shared) {
+          mostrarAviso('Imagem compartilhada: removida apenas desta ficha. A ficha original não foi alterada.');
+          return { success: true, shared: true };
+      }
+
+      throw new Error(responseData.error || 'Erro ao deletar imagem');
 
     } catch (error) {
       mostrarErro(`Erro ao remover: ${error.message}`);

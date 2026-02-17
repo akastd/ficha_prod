@@ -782,8 +782,33 @@ async function uploadBase64ToCloudinary(base64Data, publicIdPrefix) {
 app.delete('/api/cloudinary/image/:publicId', async (req, res) => {
   try {
     const { publicId } = req.params;
+    const excludeFichaId = req.query.excludeFichaId ? Number(req.query.excludeFichaId) : null;
     const timestamp = Math.round(new Date().getTime() / 1000);
     const realPublicId = publicId.replace(/_SLASH_/g, '/');
+
+    const candidatas = await dbAll(
+      'SELECT id, imagens_data FROM fichas WHERE imagens_data IS NOT NULL AND imagens_data LIKE ?',
+      [`%${realPublicId}%`]
+    );
+
+    const emUsoEmOutraFicha = candidatas.some(ficha => {
+      if (excludeFichaId && Number(ficha.id) === excludeFichaId) return false;
+      try {
+        const imagens = JSON.parse(ficha.imagens_data || '[]');
+        if (!Array.isArray(imagens)) return false;
+        return imagens.some(img => img && img.publicId === realPublicId);
+      } catch {
+        return false;
+      }
+    });
+
+    if (emUsoEmOutraFicha) {
+      return res.json({
+        success: true,
+        shared: true,
+        message: 'Imagem compartilhada. Apenas a referência local foi removida.'
+      });
+    }
 
     const paramsToSign = {
       public_id: realPublicId,
@@ -811,6 +836,12 @@ app.delete('/api/cloudinary/image/:publicId', async (req, res) => {
     if (result.result === 'ok') {
       console.log(`🗑️ Imagem deletada do Cloudinary: ${realPublicId}`);
       res.json({ success: true });
+    } else if (result.result === 'not found') {
+      res.json({
+        success: true,
+        notFound: true,
+        message: 'Imagem já não existia no Cloudinary.'
+      });
     } else {
       res.status(400).json({ error: 'Falha ao deletar imagem', details: result });
     }
