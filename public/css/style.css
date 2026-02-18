@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --primary: #111827;
   --secondary: #2563eb;
   --accent: #ef4444;
@@ -35,6 +35,29 @@ header {
   padding: 20px 18px;
   border-radius: 18px;
   margin-bottom: 20px;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-logo {
+  height: 100%;
+  width: auto;
+  max-height: 120px;
+  flex-shrink: 0;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.header-logo path {
+  fill: var(--bg-body) !important;
+  stroke: var(--bg-body) !important;
+  stroke-width: 0 !important;
 }
 
 header h1 {
