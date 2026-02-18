@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import express from 'express';
 import crypto from 'crypto';
 import cors from 'cors';
@@ -29,6 +29,51 @@ function generateCloudinarySignature(paramsToSign) {
 
   const stringToSign = sortedParams + CLOUDINARY_CONFIG.apiSecret;
   return crypto.createHash('sha1').update(stringToSign).digest('hex');
+}
+
+const NAME_EXCEPTIONS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
+
+function normalizeNameCase(value) {
+  if (typeof value !== 'string') return '';
+  const text = value.trim().replace(/\s+/g, ' ');
+  if (!text) return '';
+
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map((word, index) => word
+      .split(/([-/])/)
+      .map(part => {
+        if (!part || part === '-' || part === '/') return part;
+        if (index > 0 && NAME_EXCEPTIONS.has(part)) return part;
+        return part.charAt(0).toUpperCase() + part.slice(1);
+      })
+      .join(''))
+    .join(' ');
+}
+
+function normalizeProdutos(produtos) {
+  if (!Array.isArray(produtos)) return [];
+
+  return produtos.map(produto => {
+    if (!produto || typeof produto !== 'object') return produto;
+    return {
+      ...produto,
+      descricao: normalizeNameCase(produto.descricao || '')
+    };
+  });
+}
+
+function normalizeFichaPayload(dados) {
+  return {
+    ...dados,
+    cliente: normalizeNameCase(dados?.cliente || ''),
+    vendedor: normalizeNameCase(dados?.vendedor || ''),
+    corPeDeGolaInterno: normalizeNameCase(dados?.corPeDeGolaInterno || ''),
+    corPeDeGolaExterno: normalizeNameCase(dados?.corPeDeGolaExterno || ''),
+    corBotao: normalizeNameCase(dados?.corBotao || ''),
+    produtos: normalizeProdutos(dados?.produtos)
+  };
 }
 
 // Middlewares
@@ -89,6 +134,9 @@ async function initDatabase() {
         largura_gola TEXT,
         cor_peitilho_interno TEXT,
         cor_peitilho_externo TEXT,
+        cor_pe_de_gola_interno TEXT,
+        cor_pe_de_gola_externo TEXT,
+        cor_botao TEXT,
         abertura_lateral TEXT,
         cor_abertura_lateral TEXT,
         reforco_gola TEXT,
@@ -101,7 +149,6 @@ async function initDatabase() {
         faixa_local TEXT,
         faixa_cor TEXT,
         arte TEXT,
-        cor_sublimacao TEXT,
         observacoes TEXT,
         imagem_data TEXT,
         imagens_data TEXT,
@@ -137,6 +184,9 @@ async function initDatabase() {
       'cor_acabamento_manga TEXT',
       'cor_gola TEXT',
       'largura_gola TEXT',
+      'cor_pe_de_gola_interno TEXT',
+      'cor_pe_de_gola_externo TEXT',
+      'cor_botao TEXT',
       'cor_abertura_lateral TEXT',
       'filete_local TEXT',
       'filete_cor TEXT',
@@ -276,7 +326,7 @@ app.get('/api/fichas/:id', async (req, res) => {
 // Criar nova ficha
 app.post('/api/fichas', async (req, res) => {
   try {
-    const dados = req.body;
+    const dados = normalizeFichaPayload(req.body);
     const produtosJson = JSON.stringify(dados.produtos || []);
     const now = new Date().toISOString();
 
@@ -284,11 +334,11 @@ app.post('/api/fichas', async (req, res) => {
       INSERT INTO fichas (
         cliente, vendedor, data_inicio, numero_venda, data_entrega, evento,
         material, composicao, cor_material, manga, acabamento_manga, largura_manga, cor_acabamento_manga,
-        gola, cor_gola, acabamento_gola, largura_gola, cor_peitilho_interno, cor_peitilho_externo,
+        gola, cor_gola, acabamento_gola, largura_gola, cor_peitilho_interno, cor_peitilho_externo, cor_pe_de_gola_interno, cor_pe_de_gola_externo, cor_botao,
         abertura_lateral, cor_abertura_lateral, reforco_gola, cor_reforco, bolso,
         filete, filete_local, filete_cor, faixa, faixa_local, faixa_cor,
-        arte, cor_sublimacao, observacoes, imagem_data, imagens_data, produtos, data_criacao, data_atualizacao
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        arte, observacoes, imagem_data, imagens_data, produtos, data_criacao, data_atualizacao
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const params = [
@@ -297,11 +347,11 @@ app.post('/api/fichas', async (req, res) => {
       dados.material, dados.composicao, dados.corMaterial, dados.manga,
       dados.acabamentoManga, dados.larguraManga, dados.corAcabamentoManga,
       dados.gola, dados.corGola, dados.acabamentoGola,
-      dados.larguraGola, dados.corPeitilhoInterno, dados.corPeitilhoExterno,
+      dados.larguraGola, dados.corPeitilhoInterno, dados.corPeitilhoExterno, dados.corPeDeGolaInterno, dados.corPeDeGolaExterno, dados.corBotao,
       dados.aberturaLateral, dados.corAberturaLateral, dados.reforcoGola, dados.corReforco, dados.bolso,
       dados.filete, dados.fileteLocal, dados.fileteCor,
       dados.faixa, dados.faixaLocal, dados.faixaCor,
-      dados.arte, dados.corSublimacao, dados.observacoes, dados.imagemData, dados.imagensData,
+      dados.arte, dados.observacoes, dados.imagemData, dados.imagensData,
       produtosJson, now, now
     ];
 
@@ -330,7 +380,7 @@ app.put('/api/fichas/:id', async (req, res) => {
       return res.status(404).json({ error: 'Ficha não encontrada' });
     }
 
-    const dados = req.body;
+    const dados = normalizeFichaPayload(req.body);
     const produtosJson = JSON.stringify(dados.produtos || []);
     const now = new Date().toISOString();
 
@@ -341,11 +391,11 @@ app.put('/api/fichas/:id', async (req, res) => {
         material = ?, composicao = ?, cor_material = ?, manga = ?,
         acabamento_manga = ?, largura_manga = ?, cor_acabamento_manga = ?,
         gola = ?, cor_gola = ?, acabamento_gola = ?,
-        largura_gola = ?, cor_peitilho_interno = ?, cor_peitilho_externo = ?,
+        largura_gola = ?, cor_peitilho_interno = ?, cor_peitilho_externo = ?, cor_pe_de_gola_interno = ?, cor_pe_de_gola_externo = ?, cor_botao = ?,
         abertura_lateral = ?, cor_abertura_lateral = ?, reforco_gola = ?, cor_reforco = ?, bolso = ?,
         filete = ?, filete_local = ?, filete_cor = ?,
         faixa = ?, faixa_local = ?, faixa_cor = ?,
-        arte = ?, cor_sublimacao = ?, observacoes = ?, imagem_data = ?, imagens_data = ?,
+        arte = ?, observacoes = ?, imagem_data = ?, imagens_data = ?,
         produtos = ?, data_atualizacao = ?
       WHERE id = ?
     `;
@@ -356,11 +406,11 @@ app.put('/api/fichas/:id', async (req, res) => {
       dados.material, dados.composicao, dados.corMaterial, dados.manga,
       dados.acabamentoManga, dados.larguraManga, dados.corAcabamentoManga,
       dados.gola, dados.corGola, dados.acabamentoGola,
-      dados.larguraGola, dados.corPeitilhoInterno, dados.corPeitilhoExterno,
+      dados.larguraGola, dados.corPeitilhoInterno, dados.corPeitilhoExterno, dados.corPeDeGolaInterno, dados.corPeDeGolaExterno, dados.corBotao,
       dados.aberturaLateral, dados.corAberturaLateral, dados.reforcoGola, dados.corReforco, dados.bolso,
       dados.filete, dados.fileteLocal, dados.fileteCor,
       dados.faixa, dados.faixaLocal, dados.faixaCor,
-      dados.arte, dados.corSublimacao, dados.observacoes, dados.imagemData, dados.imagensData,
+      dados.arte, dados.observacoes, dados.imagemData, dados.imagensData,
       produtosJson, now, req.params.id
     ];
 
@@ -481,30 +531,36 @@ app.put('/api/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { nome, primeiro_pedido, ultimo_pedido } = req.body;
+    const nomeNormalizado = normalizeNameCase(nome || '');
 
     const clienteExiste = await dbGet('SELECT * FROM clientes WHERE id = ?', [id]);
     if (!clienteExiste) {
       return res.status(404).json({ error: 'Cliente não encontrado' });
     }
 
-    if (nome && nome !== clienteExiste.nome) {
-      const nomeExiste = await dbGet('SELECT id FROM clientes WHERE nome = ? AND id != ?', [nome, id]);
+    if (nomeNormalizado && nomeNormalizado.toLowerCase() !== (clienteExiste.nome || '').toLowerCase()) {
+      const nomeExiste = await dbGet(
+        'SELECT id FROM clientes WHERE lower(nome) = lower(?) AND id != ?',
+        [nomeNormalizado, id]
+      );
       if (nomeExiste) {
         return res.status(400).json({ error: 'Já existe um cliente com este nome' });
       }
     }
 
+    const nomeFinal = nomeNormalizado || clienteExiste.nome;
+
     await dbRun(
       `UPDATE clientes SET nome = ?, primeiro_pedido = ?, ultimo_pedido = ? WHERE id = ?`,
-      [nome || clienteExiste.nome, primeiro_pedido, ultimo_pedido, id]
+      [nomeFinal, primeiro_pedido, ultimo_pedido, id]
     );
 
-    if (nome && nome !== clienteExiste.nome) {
+    if (nomeFinal !== clienteExiste.nome) {
       await dbRun(
-        `UPDATE fichas SET cliente = ? WHERE cliente = ?`,
-        [nome, clienteExiste.nome]
+        `UPDATE fichas SET cliente = ? WHERE lower(cliente) = lower(?)`,
+        [nomeFinal, clienteExiste.nome]
       );
-      console.log(`📝 Nome do cliente atualizado nas fichas: "${clienteExiste.nome}" -> "${nome}"`);
+      console.log(`📝 Nome do cliente atualizado nas fichas: "${clienteExiste.nome}" -> "${nomeFinal}"`);
     }
 
     console.log(`✅ Cliente #${id} atualizado`);
@@ -857,18 +913,20 @@ async function atualizarCliente(nomeCliente, dataInicio) {
   try {
     const hoje = new Date().toISOString().split('T')[0];
     const data = dataInicio || hoje;
+    const nomeNormalizado = normalizeNameCase(nomeCliente);
+    if (!nomeNormalizado) return;
 
-    const clienteExiste = await dbGet('SELECT * FROM clientes WHERE nome = ?', [nomeCliente]);
+    const clienteExiste = await dbGet('SELECT * FROM clientes WHERE lower(nome) = lower(?)', [nomeNormalizado]);
 
     if (clienteExiste) {
       await dbRun(
-        `UPDATE clientes SET ultimo_pedido = ?, total_pedidos = total_pedidos + 1 WHERE nome = ?`,
-        [data, nomeCliente]
+        `UPDATE clientes SET nome = ?, ultimo_pedido = ?, total_pedidos = total_pedidos + 1 WHERE id = ?`,
+        [nomeNormalizado, data, clienteExiste.id]
       );
     } else {
       await dbRun(
         `INSERT INTO clientes (nome, primeiro_pedido, ultimo_pedido, total_pedidos) VALUES (?, ?, ?, 1)`,
-        [nomeCliente, data, data]
+        [nomeNormalizado, data, data]
       );
     }
   } catch (error) {
@@ -1572,3 +1630,4 @@ initDatabase().then(() => {
   console.error('❌ Falha ao iniciar servidor:', error);
   process.exit(1);
 });
+

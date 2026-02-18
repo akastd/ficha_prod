@@ -37,12 +37,12 @@
                 <div class="card-body">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="cliente">Nome do Cliente</label>
+                            <label for="cliente"><i class="fas fa-user" aria-hidden="true"></i> Nome do Cliente</label>
                             <input type="text" id="cliente" class="form-control" placeholder="Digite o nome do cliente">
                         </div>
 
                         <div class="form-group">
-                            <label for="vendedor">Vendedor</label>
+                            <label for="vendedor"><i class="fas fa-user-tie" aria-hidden="true"></i> Vendedor</label>
                             <input type="text" id="vendedor" list="vendedoresList" class="form-control"
                                 placeholder="Digite o vendedor">
                             <datalist id="vendedoresList">
@@ -54,22 +54,22 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="dataInicio">Data de Início</label>
+                            <label for="dataInicio"><i class="fas fa-calendar-day" aria-hidden="true"></i> Data de Início</label>
                             <input type="date" id="dataInicio" class="form-control">
                         </div>
 
                         <div class="form-group">
-                            <label for="numeroVenda">Número da Venda</label>
+                            <label for="numeroVenda"><i class="fas fa-hashtag" aria-hidden="true"></i> Número da Venda</label>
                             <input type="text" id="numeroVenda" class="form-control" placeholder="Número da venda">
                         </div>
 
                         <div class="form-group">
-                            <label for="dataEntrega">Data de Entrega</label>
+                            <label for="dataEntrega"><i class="fas fa-calendar-check" aria-hidden="true"></i> Data de Entrega</label>
                             <input type="date" id="dataEntrega" class="form-control">
                         </div>
 
                         <div class="form-group">
-                            <label for="evento">Pedido para Evento?</label>
+                            <label for="evento"><i class="fas fa-star" aria-hidden="true"></i> Pedido para Evento?</label>
                             <select id="evento" class="form-control">
                                 <option value="nao">Não</option>
                                 <option value="sim">Sim</option>
@@ -164,14 +164,14 @@
 
                         <!-- ══════════════ MATERIAL ══════════════ -->
                         <div class="form-group">
-                            <label for="material">Tecido/Material</label>
+                            <label for="material"><i class="fas fa-rug" aria-hidden="true"></i> Tecido/Material</label>
                             <input type="text" id="material" list="materiaisList" class="form-control"
                                 placeholder="Digite ou selecione">
                             <datalist id="materiaisList"></datalist>
                         </div>
 
                         <div class="form-group">
-                            <label for="corMaterial">Cor do Material</label>
+                            <label for="corMaterial"><i class="fas fa-palette" aria-hidden="true"></i> Cor do Material</label>
                             <input type="text" id="corMaterial" list="coresList" class="form-control"
                                 placeholder="Ex: Branco, Preto, Azul Marinho">
                             <datalist id="coresList"></datalist>
@@ -181,20 +181,14 @@
                         <hr class="form-divider" data-label="Manga">
 
                         <div class="form-group">
-                            <label for="manga">Tipo de Manga</label>
-                            <input id="manga" list="mangaList" class="form-control">
-                            <datalist id="mangaList">
-                                <option>Curta</option>
-                                <option>Longa</option>
-                                <option>Curta e Longa</option>
-                                <option>Raglan Curta</option>
-                                <option>Raglan Longa</option>
-                                <option>3/4</option>
-                            </datalist>
+                            <label for="manga"><i class="fas fa-bread-slice" aria-hidden="true"></i> Tipo de Manga</label>
+                            <select id="manga" class="form-control">
+                                <option value="">-</option>
+                            </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="acabamentoManga">Acabamento da Manga</label>
+                            <label for="acabamentoManga"><i class="fas fa-sliders" aria-hidden="true"></i> Acabamento da Manga</label>
                             <select id="acabamentoManga" class="form-control">
                                 <option value="">-</option>
                                 <option value="barra">Barra</option>
@@ -205,14 +199,14 @@
 
                         <!-- Campos condicionais da manga (viés ou punho) -->
                         <div class="form-group" id="larguraMangaContainer" style="display: none;">
-                            <label for="larguraManga">Largura Acab. Manga</label>
+                            <label for="larguraManga"><i class="fas fa-ruler" aria-hidden="true"></i> Largura Acab. Manga</label>
                             <input type="text" id="larguraManga" list="largurasList" class="form-control"
                                 placeholder="Ex: 3,5">
                             <datalist id="largurasList"></datalist>
                         </div>
 
                         <div class="form-group" id="corAcabamentoMangaContainer" style="display: none;">
-                            <label for="corAcabamentoManga">Cor Acab. Manga</label>
+                            <label for="corAcabamentoManga"><i class="fas fa-palette" aria-hidden="true"></i> Cor Acab. Manga</label>
                             <input type="text" id="corAcabamentoManga" class="form-control" list="coresList"
                                 placeholder="Ex: Branco, Preto, Azul Marinho">
                             <datalist id="coresList"></datalist>
@@ -222,21 +216,23 @@
                         <hr class="form-divider" data-label="Gola">
 
                         <div class="form-group">
-                            <label for="gola">Tipo de Gola</label>
+                            <label for="gola"><i class="fas fa-ring" aria-hidden="true"></i> Tipo de Gola</label>
                             <select id="gola" class="form-control">
                                 <option value="">-</option>
                                 <option value="redonda">Gola Redonda</option>
                                 <option value="v">Gola V</option>
                                 <option value="polo">Gola Polo</option>
+                                <option value="social">Gola Social</option>
                                 <option value="padre_ziper">Gola Padre com Zíper</option>
                                 <option value="padre_esportiva">Gola Padre Esportiva</option>
                                 <option value="v_polo">Gola V Polo</option>
+                                <option value="canoa">Gola Canoa</option>
                             </select>
                         </div>
 
                         <!-- Cor da Gola (sempre que tiver gola selecionada) -->
                         <div class="form-group" id="corGolaContainer" style="display: none;">
-                            <label for="corGola">Cor da Gola</label>
+                            <label for="corGola"><i class="fas fa-palette" aria-hidden="true"></i> Cor da Gola</label>
                             <input type="text" id="corGola" class="form-control" list="coresList"
                                 placeholder="Ex: Branco, Preto, Azul Marinho">
                             <datalist id="coresList"></datalist>
@@ -244,7 +240,7 @@
 
                         <!-- Acabamento da Gola (NÃO aparece para Polo) -->
                         <div class="form-group" id="acabamentoGolaContainer">
-                            <label for="acabamentoGola">Acabamento da Gola</label>
+                            <label for="acabamentoGola"><i class="fas fa-sliders" aria-hidden="true"></i> Acabamento da Gola</label>
                             <select id="acabamentoGola" class="form-control">
                                 <option value="">-</option>
                                 <option value="ribana">Ribana</option>
@@ -257,14 +253,14 @@
 
                         <!-- Largura do acabamento da gola (NÃO aparece para Polo) -->
                         <div class="form-group" id="larguraGolaContainer" style="display: none;">
-                            <label for="larguraGola">Largura Acab. Gola</label>
+                            <label for="larguraGola"><i class="fas fa-ruler" aria-hidden="true"></i> Largura Acab. Gola</label>
                             <input type="text" list="largurasList" id="larguraGola" class="form-control"
                                 placeholder="Ex: 2,5">
                         </div>
 
                         <!-- Reforço na Gola (select Sim/Não) -->
                         <div class="form-group" id="reforcoGolaContainer" style="display: none;">
-                            <label for="reforcoGola">Reforço na Gola</label>
+                            <label for="reforcoGola"><i class="fas fa-shield-halved" aria-hidden="true"></i> Reforço na Gola</label>
                             <select id="reforcoGola" class="form-control">
                                 <option value="nao">Não</option>
                                 <option value="sim">Sim</option>
@@ -272,7 +268,7 @@
                         </div>
 
                         <div class="form-group" id="corReforcoContainer" style="display: none;">
-                            <label for="corReforco">Cor do Reforço</label>
+                            <label for="corReforco"><i class="fas fa-palette" aria-hidden="true"></i> Cor do Reforço</label>
                             <input type="text" id="corReforco" class="form-control" list="coresList"
                                 placeholder="Ex: Branco, Preto, Azul Marinho">
                             <datalist id="coresList"></datalist>
@@ -280,22 +276,29 @@
 
                         <!-- ══════════════ CAMPOS ESPECÍFICOS POLO ══════════════ -->
                         <div class="form-group" id="corPeitilhoInternoContainer" style="display: none;">
-                            <label for="corPeitilhoInterno">Cor do Peitilho Interno</label>
+                            <label for="corPeitilhoInterno"><i class="fas fa-palette" aria-hidden="true"></i> Cor do Peitilho Interno</label>
                             <input type="text" id="corPeitilhoInterno" class="form-control" list="coresList"
                                 placeholder="Ex: Branco, Preto, Azul Marinho">
                             <datalist id="coresList"></datalist>
                         </div>
 
                         <div class="form-group" id="corPeitilhoExternoContainer" style="display: none;">
-                            <label for="corPeitilhoExterno">Cor do Peitilho Externo</label>
+                            <label for="corPeitilhoExterno"><i class="fas fa-palette" aria-hidden="true"></i> Cor do Peitilho Externo</label>
                             <input type="text" id="corPeitilhoExterno" class="form-control" list="coresList"
                                 placeholder="Ex: Branco, Preto, Azul Marinho">
                             <datalist id="coresList"></datalist>
                         </div>
 
+                        <div class="form-group" id="corBotaoContainer" style="display: none;">
+                            <label for="corBotao"><i class="fas fa-circle" aria-hidden="true"></i> Cor do Botão</label>
+                            <input type="text" id="corBotao" class="form-control" list="coresBotoesList"
+                                placeholder="Ex: Branco, Preto, Azul Marinho">
+                            <datalist id="coresBotoesList"></datalist>
+                        </div>
+
                         <!-- Abertura Lateral (select Sim/Não - só para Polo) -->
                         <div class="form-group" id="aberturaLateralContainer" style="display: none;">
-                            <label for="aberturaLateral">Abertura na Lateral</label>
+                            <label for="aberturaLateral"><i class="fas fa-arrows-left-right" aria-hidden="true"></i> Abertura na Lateral</label>
                             <select id="aberturaLateral" class="form-control">
                                 <option value="nao">Não</option>
                                 <option value="sim">Sim</option>
@@ -303,8 +306,23 @@
                         </div>
 
                         <div class="form-group" id="corAberturaLateralContainer" style="display: none;">
-                            <label for="corAberturaLateral">Cor da Abertura Lateral</label>
+                            <label for="corAberturaLateral"><i class="fas fa-palette" aria-hidden="true"></i> Cor da Abertura Lateral</label>
                             <input type="text" id="corAberturaLateral" class="form-control" list="coresList"
+                                placeholder="Ex: Branco, Preto, Azul Marinho">
+                            <datalist id="coresList"></datalist>
+                        </div>
+
+                        <!-- ══════════════ CAMPOS ESPECÍFICOS GOLA SOCIAL ══════════════ -->
+                        <div class="form-group" id="corPeDeGolaInternoContainer" style="display: none;">
+                            <label for="corPeDeGolaInterno"><i class="fas fa-palette" aria-hidden="true"></i> Cor do Pé de Gola Interno</label>
+                            <input type="text" id="corPeDeGolaInterno" class="form-control" list="coresList"
+                                placeholder="Ex: Branco, Preto, Azul Marinho">
+                            <datalist id="coresList"></datalist>
+                        </div>
+
+                        <div class="form-group" id="corPeDeGolaExternoContainer" style="display: none;">
+                            <label for="corPeDeGolaExterno"><i class="fas fa-palette" aria-hidden="true"></i> Cor do Pé de Gola Externo</label>
+                            <input type="text" id="corPeDeGolaExterno" class="form-control" list="coresList"
                                 placeholder="Ex: Branco, Preto, Azul Marinho">
                             <datalist id="coresList"></datalist>
                         </div>
@@ -313,14 +331,15 @@
                         <hr class="form-divider" data-label="Detalhes">
 
                         <div class="form-group">
-                            <label for="bolso">Bolso</label>
+                            <label for="bolso"><i class="fas fa-shield" aria-hidden="true"></i> Bolso</label>
                             <select id="bolso" class="form-control">
                                 <option value="nenhum">-</option>
                                 <option value="peito">Bolso no Peito</option>
                                 <option value="traseiros">Bolsos Traseiros</option>
                                 <option value="canguru">Bolso Canguru</option>
                                 <option value="cargueiro">Bolso Cargueiro</option>
-                                <option value="dois_frente">Dois Bolsos na Frente</option>
+                                <option value="dois_frente">Dois Bolsos na Frente</option> 
+                                <option value="dois_frente_atras">Dois Bolsos na Frente e Atrás</option> 
                                 <option value="embutido">Bolsos na frente embutido</option>
                                 <option value="externo">Bolsos na frente externo</option>
                                 <option value="frente_traseiro">Bolsos na frente e atrás</option>
@@ -328,7 +347,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="filete">Filete</label>
+                            <label for="filete"><i class="fas fa-bezier-curve" aria-hidden="true"></i> Filete</label>
                             <select id="filete" class="form-control">
                                 <option value="nao">Não</option>
                                 <option value="sim">Sim</option>
@@ -336,19 +355,21 @@
                         </div>
 
                         <div class="form-group" id="fileteLocalContainer" style="display: none;">
-                            <label for="fileteLocal">Local do Filete</label>
-                            <input type="text" id="fileteLocal" class="form-control" placeholder="Ex: Gola, Manga">
+                            <label for="fileteLocal"><i class="fas fa-location-dot" aria-hidden="true"></i> Local do Filete</label>
+                            <input type="text" id="fileteLocal" class="form-control" list="fileteLocalList"
+                                placeholder="Ex: Gola, Manga">
+                            <datalist id="fileteLocalList"></datalist>
                         </div>
 
                         <div class="form-group" id="fileteCorContainer" style="display: none;">
-                            <label for="fileteCor">Cor do Filete</label>
+                            <label for="fileteCor"><i class="fas fa-palette" aria-hidden="true"></i> Cor do Filete</label>
                             <input type="text" id="fileteCor" class="form-control" list="coresList"
                                 placeholder="Ex: Branco, Preto, Azul Marinho">
                             <datalist id="coresList"></datalist>
                         </div>
 
                         <div class="form-group">
-                            <label for="faixa">Faixa Refletiva</label>
+                            <label for="faixa"><i class="fas fa-grip-lines" aria-hidden="true"></i> Faixa Refletiva</label>
                             <select id="faixa" class="form-control">
                                 <option value="nao">Não</option>
                                 <option value="sim">Sim</option>
@@ -356,20 +377,24 @@
                         </div>
 
                         <div class="form-group" id="faixaLocalContainer" style="display: none;">
-                            <label for="faixaLocal">Local da Faixa</label>
-                            <input type="text" id="faixaLocal" class="form-control" placeholder="Ex: Braço, Peito">
+                            <label for="faixaLocal"><i class="fas fa-location-dot" aria-hidden="true"></i> Local da Faixa</label>
+                            <input type="text" id="faixaLocal" class="form-control" list="faixaLocalList"
+                                placeholder="Ex: Cintura, Mangas">
+                            <datalist id="faixaLocalList"></datalist>
                         </div>
 
                         <div class="form-group" id="faixaCorContainer" style="display: none;">
-                            <label for="faixaCor">Cor da Faixa</label>
-                            <input type="text" id="faixaCor" class="form-control" placeholder="Ex: Prata">
+                            <label for="faixaCor"><i class="fas fa-palette" aria-hidden="true"></i> Cor da Faixa</label>
+                            <input type="text" id="faixaCor" class="form-control" list="faixaCorList"
+                                placeholder="Ex: Cinza / Prata">
+                            <datalist id="faixaCorList"></datalist>
                         </div>
 
                         <!-- ══════════════ ARTE ══════════════ -->
                         <hr class="form-divider" data-label="Arte / Personalização">
 
                         <div class="form-group">
-                            <label for="arte">Tipo de Arte</label>
+                            <label for="arte"><i class="fas fa-paint-brush" aria-hidden="true"></i> Tipo de Arte</label>
                             <select id="arte" class="form-control">
                                 <option value="">-</option>
                                 <option value="sublimacao">Sublimação</option>
@@ -384,22 +409,15 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="composicao">Composição do Material</label>
+                            <label for="composicao"><i class="fas fa-tag" aria-hidden="true"></i> Composição do Material</label>
                             <input type="text" id="composicao" class="form-control"
                                 placeholder="Preenchido automaticamente (pode editar)" style="width: 400px;">
                         </div>
 
-                        <div class="form-group" id="corContainer" style="display: none;">
-                            <label for="cor">Cor (Sublimação)</label>
-                            <div class="sublimation-color">
-                                <input type="color" id="cor" class="form-control color-input" value="#ff0000">
-                                <div id="corPreview" class="color-preview"></div>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="form-group" style="margin-top: 16px;">
-                        <label for="observacoes">Observações</label>
+                        <label for="observacoes"><i class="fas fa-note-sticky" aria-hidden="true"></i> Observações</label>
                         <textarea id="observacoes" class="form-control" rows="3"
                             placeholder="Ex: Algumas camisetas com manga longa, outras com manga curta..."
                             style="display: none;"></textarea>
@@ -511,6 +529,12 @@
                             Interno:</span> <span id="print-corPeitilhoInterno"></span></div>
                     <div id="print-corPeitilhoExternoDiv" style="display: none;"><span class="label">Cor Peitilho
                             Externo:</span> <span id="print-corPeitilhoExterno"></span></div>
+                    <div id="print-corBotaoDiv" style="display: none;"><span class="label">Cor do Botão:</span> <span
+                            id="print-corBotao"></span></div>
+                    <div id="print-corPeDeGolaInternoDiv" style="display: none;"><span class="label">Cor Pé de Gola
+                            Interno:</span> <span id="print-corPeDeGolaInterno"></span></div>
+                    <div id="print-corPeDeGolaExternoDiv" style="display: none;"><span class="label">Cor Pé de Gola
+                            Externo:</span> <span id="print-corPeDeGolaExterno"></span></div>
                     <div id="print-aberturaLateralDiv" style="display: none;"><span class="label">Abertura
                             Lateral:</span> <span id="print-aberturaLateral"></span></div>
                     <div id="print-corAberturaLateralDiv" style="display: none;"><span class="label">Cor Abertura

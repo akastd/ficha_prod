@@ -104,6 +104,9 @@ class APIClient {
       corAberturaLateral: dados.corAberturaLateral || '',
       reforcoGola: dados.reforcoGola || 'nao',
       corReforco: dados.corReforco || '',
+      corBotao: dados.corBotao || '',
+      corPeDeGolaInterno: dados.corPeDeGolaInterno || '',
+      corPeDeGolaExterno: dados.corPeDeGolaExterno || '',
       bolso: dados.bolso || '',
       filete: dados.filete || 'nao',
       fileteLocal: dados.fileteLocal || '',
@@ -112,7 +115,6 @@ class APIClient {
       faixaLocal: dados.faixaLocal || '',
       faixaCor: dados.faixaCor || '',
       arte: dados.arte || '',
-      corSublimacao: dados.corSublimacao || '',
       observacoes: dados.observacoes || '',
       imagemData: dados.imagemData || '',
       imagensData: dados.imagensData || '[]'

@@ -277,18 +277,20 @@
     const isEvento = ficha.evento === 'sim';
     const isPendente = ficha.status === 'pendente';
     const miniaturaSrc = obterMiniaturaFicha(ficha);
+    const clienteFormatado = capitalizeFirstLetter(ficha.cliente);
+    const vendedorFormatado = capitalizeFirstLetter(ficha.vendedor);
 
     return `
     <div class="ficha-item ${isPendente ? '' : 'ficha-entregue'}">
       <div class="ficha-thumb ${miniaturaSrc ? 'has-image' : 'no-image'}">
         ${miniaturaSrc
-        ? `<img src="${miniaturaSrc}" alt="Miniatura da ficha de ${ficha.cliente || 'cliente'}" loading="lazy">`
+        ? `<img src="${miniaturaSrc}" alt="Miniatura da ficha de ${clienteFormatado || 'cliente'}" loading="lazy">`
         : '<i class="fas fa-image" aria-hidden="true"></i>'}
       </div>
       <div class="ficha-main">
         <div class="ficha-header">
           <a class="ficha-cliente ficha-cliente-link" href="index.html?visualizar=${ficha.id}" data-id="${ficha.id}" title="Visualizar ficha">
-            ${ficha.cliente || 'Cliente não informado'}
+            ${clienteFormatado || 'Cliente não informado'}
           </a>
           ${ficha.numero_venda ? `<span class="ficha-numero">#${ficha.numero_venda}</span>` : ''}
           ${isEvento ? '<span class="ficha-evento-badge"><i class="fas fa-star"></i> Evento</span>' : ''}
@@ -299,7 +301,7 @@
           ${ficha.vendedor ? `
             <div class="ficha-detail">
               <i class="fas fa-user"></i>
-              <span>${ficha.vendedor}</span>
+              <span>${vendedorFormatado}</span>
             </div>
           ` : ''}
 
@@ -621,10 +623,13 @@
       largura_gola: 'larguraGola',
       cor_peitilho_interno: 'corPeitilhoInterno',
       cor_peitilho_externo: 'corPeitilhoExterno',
+      cor_pe_de_gola_interno: 'corPeDeGolaInterno',
+      cor_pe_de_gola_externo: 'corPeDeGolaExterno',
       abertura_lateral: 'aberturaLateral',
       cor_abertura_lateral: 'corAberturaLateral',
       reforco_gola: 'reforcoGola',
       cor_reforco: 'corReforco',
+      cor_botao: 'corBotao',
       filete_local: 'fileteLocal',
       filete_cor: 'fileteCor',
       faixa_local: 'faixaLocal',
@@ -832,6 +837,27 @@
     } catch {
       return dataStr;
     }
+  }
+
+  function capitalizeFirstLetter(value) {
+    if (typeof value !== 'string') return '';
+    const texto = value.trim().replace(/\s+/g, ' ');
+    if (!texto) return '';
+
+    return texto
+      .toLowerCase()
+      .split(' ')
+      .map((palavra, index) => {
+        return palavra
+          .split(/([-/])/)
+          .map(parte => {
+            if (!parte || parte === '-' || parte === '/') return parte;
+            if (index > 0 && ['de', 'da', 'do', 'das', 'dos', 'e'].includes(parte)) return parte;
+            return parte.charAt(0).toUpperCase() + parte.slice(1);
+          })
+          .join('');
+      })
+      .join(' ');
   }
 
   function calcularTotalItens(produtos) {

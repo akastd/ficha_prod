@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --primary: #111827;
   --secondary: #2563eb;
   --accent: #ef4444;
@@ -377,7 +377,7 @@ textarea.form-control {
   }
 }
 
-/* IMPRESSÃO */
+/* IMPRESSÃO */
 /* Preview da versao de impressao dentro do modal (tela) */
 body.preview-impressao {
   background: #e2e8f0;
@@ -885,3 +885,4 @@ body.preview-impressao .print-observacoes {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+

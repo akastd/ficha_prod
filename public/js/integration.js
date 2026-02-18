@@ -30,10 +30,13 @@
     'largura_gola': 'larguraGola',
     'cor_peitilho_interno': 'corPeitilhoInterno',
     'cor_peitilho_externo': 'corPeitilhoExterno',
+    'cor_pe_de_gola_interno': 'corPeDeGolaInterno',
+    'cor_pe_de_gola_externo': 'corPeDeGolaExterno',
     'abertura_lateral': 'aberturaLateral',
     'cor_abertura_lateral': 'corAberturaLateral',
     'reforco_gola': 'reforcoGola',
     'cor_reforco': 'corReforco',
+    'cor_botao': 'corBotao',
     'bolso': 'bolso',
     'filete': 'filete',
     'filete_local': 'fileteLocal',
@@ -42,7 +45,6 @@
     'faixa_local': 'faixaLocal',
     'faixa_cor': 'faixaCor',
     'arte': 'arte',
-    'cor_sublimacao': 'corSublimacao',
     'observacoes': 'observacoes',
     'imagens_data': 'imagensData',
     'imagem_data': 'imagemData',
@@ -286,6 +288,13 @@
       imagensData = window.getImagens();
     }
 
+    const gola = document.getElementById('gola')?.value || '';
+    const isPolo = gola === 'polo' || gola === 'v_polo';
+    const isSocial = gola === 'social';
+    const temGola = gola !== '';
+    const reforcoGola = (temGola && !isSocial) ? (document.getElementById('reforcoGola')?.value || 'nao') : 'nao';
+    const aberturaLateral = isPolo ? (document.getElementById('aberturaLateral')?.value || 'nao') : 'nao';
+
     const dados = {
       cliente: document.getElementById('cliente')?.value || '',
       vendedor: document.getElementById('vendedor')?.value || '',
@@ -301,16 +310,19 @@
       acabamentoManga: document.getElementById('acabamentoManga')?.value || '',
       larguraManga: document.getElementById('larguraManga')?.value || '',
       corAcabamentoManga: document.getElementById('corAcabamentoManga')?.value || '',
-      gola: document.getElementById('gola')?.value || '',
-      corGola: document.getElementById('corGola')?.value || '',
-      acabamentoGola: document.getElementById('acabamentoGola')?.value || '',
-      larguraGola: document.getElementById('larguraGola')?.value || '',
-      corPeitilhoInterno: document.getElementById('corPeitilhoInterno')?.value || '',
-      corPeitilhoExterno: document.getElementById('corPeitilhoExterno')?.value || '',
-      aberturaLateral: document.getElementById('aberturaLateral')?.value || 'nao',
-      corAberturaLateral: document.getElementById('corAberturaLateral')?.value || '',
-      reforcoGola: document.getElementById('reforcoGola')?.value || 'nao',
-      corReforco: document.getElementById('corReforco')?.value || '',
+      gola,
+      corGola: (temGola && !isSocial) ? (document.getElementById('corGola')?.value || '') : '',
+      acabamentoGola: (isPolo || isSocial) ? '' : (document.getElementById('acabamentoGola')?.value || ''),
+      larguraGola: (isPolo || isSocial) ? '' : (document.getElementById('larguraGola')?.value || ''),
+      corPeitilhoInterno: isPolo ? (document.getElementById('corPeitilhoInterno')?.value || '') : '',
+      corPeitilhoExterno: isPolo ? (document.getElementById('corPeitilhoExterno')?.value || '') : '',
+      corPeDeGolaInterno: isSocial ? (document.getElementById('corPeDeGolaInterno')?.value || '') : '',
+      corPeDeGolaExterno: isSocial ? (document.getElementById('corPeDeGolaExterno')?.value || '') : '',
+      corBotao: (isPolo || isSocial) ? (document.getElementById('corBotao')?.value || '') : '',
+      aberturaLateral,
+      corAberturaLateral: (isPolo && aberturaLateral === 'sim') ? (document.getElementById('corAberturaLateral')?.value || '') : '',
+      reforcoGola,
+      corReforco: reforcoGola === 'sim' ? (document.getElementById('corReforco')?.value || '') : '',
       bolso: document.getElementById('bolso')?.value || '',
       filete: document.getElementById('filete')?.value || '',
       fileteLocal: document.getElementById('fileteLocal')?.value || '',
@@ -319,7 +331,6 @@
       faixaLocal: document.getElementById('faixaLocal')?.value || '',
       faixaCor: document.getElementById('faixaCor')?.value || '',
       arte: document.getElementById('arte')?.value || '',
-      corSublimacao: document.getElementById('cor')?.value || '#ffffff',
       observacoes: document.getElementById('observacoes')?.value || '',
       imagensData: JSON.stringify(imagensData),
       imagemData: imagensData.length > 0 ? imagensData[0].src : ''
@@ -541,7 +552,8 @@
       'dataEntrega', 'evento', 'material', 'composicao',
       'corMaterial', 'manga', 'acabamentoManga', 'larguraManga', 'corAcabamentoManga',
       'gola', 'corGola', 'acabamentoGola', 'larguraGola', 
-      'corPeitilhoInterno', 'corPeitilhoExterno',
+      'corPeitilhoInterno', 'corPeitilhoExterno', 'corBotao',
+      'corPeDeGolaInterno', 'corPeDeGolaExterno',
       'aberturaLateral', 'corAberturaLateral',
       'reforcoGola', 'corReforco', 
       'bolso', 'filete', 'fileteLocal', 'fileteCor',
@@ -558,15 +570,6 @@
         elemento.dispatchEvent(new Event('input', { bubbles: true }));
       }
     });
-
-    const corSublimacao = ficha.corSublimacao || ficha.cor_sublimacao;
-    if (corSublimacao) {
-      const corInput = document.getElementById('cor');
-      const corPreview = document.getElementById('corPreview');
-
-      if (corInput) corInput.value = corSublimacao;
-      if (corPreview) corPreview.style.backgroundColor = corSublimacao;
-    }
 
     // Produtos
     const produtos = ficha.produtos;
@@ -646,14 +649,15 @@
 
       const golaVal = ficha.gola;
       const isPolo = golaVal === 'polo' || golaVal === 'v_polo';
+      const isSocial = golaVal === 'social';
       const temGola = golaVal && golaVal !== '';
 
-      if (temGola) {
+      if (temGola && !isSocial) {
         const corGolaContainer = document.getElementById('corGolaContainer');
         if (corGolaContainer) corGolaContainer.style.display = 'block';
       }
 
-      if (temGola && !isPolo) {
+      if (temGola && !isPolo && !isSocial) {
         const acabamentoGolaContainer = document.getElementById('acabamentoGolaContainer');
         if (acabamentoGolaContainer) acabamentoGolaContainer.style.display = 'block';
 
@@ -663,7 +667,7 @@
         }
       }
 
-      if (temGola) {
+      if (temGola && !isSocial) {
         const reforcoGolaContainer = document.getElementById('reforcoGolaContainer');
         if (reforcoGolaContainer) reforcoGolaContainer.style.display = 'block';
 
@@ -676,16 +680,27 @@
       if (isPolo) {
         const corPeitilhoInternoContainer = document.getElementById('corPeitilhoInternoContainer');
         const corPeitilhoExternoContainer = document.getElementById('corPeitilhoExternoContainer');
+        const corBotaoContainer = document.getElementById('corBotaoContainer');
         const aberturaLateralContainer = document.getElementById('aberturaLateralContainer');
 
         if (corPeitilhoInternoContainer) corPeitilhoInternoContainer.style.display = 'block';
         if (corPeitilhoExternoContainer) corPeitilhoExternoContainer.style.display = 'block';
+        if (corBotaoContainer) corBotaoContainer.style.display = 'block';
         if (aberturaLateralContainer) aberturaLateralContainer.style.display = 'block';
 
         if (ficha.aberturaLateral === 'sim') {
           const corAberturaLateralContainer = document.getElementById('corAberturaLateralContainer');
           if (corAberturaLateralContainer) corAberturaLateralContainer.style.display = 'block';
         }
+      }
+
+      if (isSocial) {
+        const corPeDeGolaInternoContainer = document.getElementById('corPeDeGolaInternoContainer');
+        const corPeDeGolaExternoContainer = document.getElementById('corPeDeGolaExternoContainer');
+        const corBotaoContainer = document.getElementById('corBotaoContainer');
+        if (corPeDeGolaInternoContainer) corPeDeGolaInternoContainer.style.display = 'block';
+        if (corPeDeGolaExternoContainer) corPeDeGolaExternoContainer.style.display = 'block';
+        if (corBotaoContainer) corBotaoContainer.style.display = 'block';
       }
 
       if (ficha.filete === 'sim') {
