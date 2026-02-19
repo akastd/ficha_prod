@@ -542,7 +542,7 @@ body.preview-impressao .print-container {
   max-width: 1120px;
   margin: 14px auto;
   padding: 14px;
-  font-size: 13px;
+  font-size: 17px;
   color: #0f172a;
 }
 
@@ -556,7 +556,7 @@ body.preview-impressao .print-header {
 }
 
 body.preview-impressao .print-header h1 {
-  font-size: 1.08rem;
+  font-size: 1.33rem;
   margin: 0 0 4px;
   color: #0f172a;
 }
@@ -579,7 +579,7 @@ body.preview-impressao .print-card h2 {
   margin: 0 0 10px;
   padding-bottom: 6px;
   border-bottom: 1px solid #e2e8f0;
-  font-size: 0.95rem;
+  font-size: 1.2rem;
 }
 
 body.preview-impressao .print-grid {
@@ -631,7 +631,7 @@ body.preview-impressao .print-two-cols {
 body.preview-impressao .print-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 1.07rem;
   border: 1px solid #94a3b8;
 }
 
@@ -713,7 +713,7 @@ body.preview-impressao .print-observacoes {
     width: 100%;
     max-width: 100%;
     overflow: hidden;
-    font-size: 12px;
+    font-size: 16px;
     color: #111827;
   }
 
@@ -724,13 +724,13 @@ body.preview-impressao .print-observacoes {
   }
 
   .print-header h1 {
-    font-size: 12px;
+    font-size: 16px;
     margin: 0 0 2px;
   }
 
   .print-header p {
     margin: 0;
-    font-size: 12px;
+    font-size: 16px;
   }
 
   .print-card {
@@ -746,7 +746,7 @@ body.preview-impressao .print-observacoes {
   }
 
   .print-card h2 {
-    font-size: 12px;
+    font-size: 16px;
     margin: 0 0 1.5mm;
     font-weight: 600;
   }
@@ -804,7 +804,7 @@ body.preview-impressao .print-observacoes {
   .print-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 16px;
   }
 
   .print-table th,
@@ -822,13 +822,13 @@ body.preview-impressao .print-observacoes {
     margin-top: 1mm;
     text-align: left;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 16px;
   }
 
   .print-observacoes {
     min-height: 10mm;
     white-space: pre-line;
-    font-size: 12px;
+    font-size: 16px;
   }
 
   #print-imagesSection {
@@ -852,7 +852,7 @@ body.preview-impressao .print-observacoes {
   }
 
   #print-version.print-compact {
-    font-size: calc(12px * var(--print-compact-scale));
+    font-size: calc(16px * var(--print-compact-scale));
   }
 
   #print-version.print-compact .print-header {
@@ -860,12 +860,12 @@ body.preview-impressao .print-observacoes {
   }
 
   #print-version.print-compact .print-header h1 {
-    font-size: calc(12px * var(--print-compact-scale));
+    font-size: calc(16px * var(--print-compact-scale));
     margin: 0 0 calc(2px * var(--print-compact-scale));
   }
 
   #print-version.print-compact .print-header p {
-    font-size: calc(12px * var(--print-compact-scale));
+    font-size: calc(16px * var(--print-compact-scale));
   }
 
   #print-version.print-compact .print-card {
@@ -877,7 +877,7 @@ body.preview-impressao .print-observacoes {
   }
 
   #print-version.print-compact .print-card h2 {
-    font-size: calc(12px * var(--print-compact-scale));
+    font-size: calc(16px * var(--print-compact-scale));
     margin: 0 0 calc(1.5mm * var(--print-compact-scale));
   }
 
@@ -900,7 +900,7 @@ body.preview-impressao .print-observacoes {
   }
 
   #print-version.print-compact .print-table {
-    font-size: calc(12px * var(--print-compact-scale));
+    font-size: calc(16px * var(--print-compact-scale));
   }
 
   #print-version.print-compact .print-table th,
@@ -910,12 +910,12 @@ body.preview-impressao .print-observacoes {
 
   #print-version.print-compact .print-total {
     margin-top: calc(1mm * var(--print-compact-scale));
-    font-size: calc(12px * var(--print-compact-scale));
+    font-size: calc(16px * var(--print-compact-scale));
   }
 
   #print-version.print-compact .print-observacoes {
     min-height: calc(10mm * var(--print-compact-scale));
-    font-size: calc(12px * var(--print-compact-scale));
+    font-size: calc(16px * var(--print-compact-scale));
   }
 
   #print-version.print-compact #print-imagesSection {
