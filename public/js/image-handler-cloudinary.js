@@ -124,6 +124,11 @@
     if (!container) return;
 
     container.innerHTML = '';
+    container.classList.toggle('images-one', imagens.length === 1);
+    container.classList.toggle('images-two', imagens.length === 2);
+    container.classList.toggle('images-three', imagens.length === 3);
+    container.classList.toggle('images-four', imagens.length === 4);
+    container.classList.toggle('compact-four', imagens.length === MAX_IMAGENS);
 
     imagens.forEach((img, index) => {
       const card = document.createElement('div');

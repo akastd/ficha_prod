@@ -1308,15 +1308,29 @@ app.get('/api/relatorio/clientes-top', async (req, res) => {
       params = [dataInicio, dataFim];
     }
 
-    const fichas = await dbAll(`SELECT cliente, produtos FROM fichas ${whereClause}`, params);
+    const fichas = await dbAll(`SELECT cliente, numero_venda, produtos FROM fichas ${whereClause}`, params);
 
     // Agrupar por cliente
     const clientesMap = {};
     fichas.forEach(ficha => {
       if (!clientesMap[ficha.cliente]) {
-        clientesMap[ficha.cliente] = { total_pedidos: 0, total_itens: 0 };
+        clientesMap[ficha.cliente] = { total_pedidos: 0, total_itens: 0, numeroVendasContados: new Set() };
       }
-      clientesMap[ficha.cliente].total_pedidos++;
+
+      const numeroVendaNormalizado = typeof ficha.numero_venda === 'string'
+        ? ficha.numero_venda.trim()
+        : '';
+
+      // Se numero_venda existir, conta apenas uma vez por cliente.
+      // Se estiver vazio/nulo, mantém contagem por ficha.
+      if (numeroVendaNormalizado) {
+        if (!clientesMap[ficha.cliente].numeroVendasContados.has(numeroVendaNormalizado)) {
+          clientesMap[ficha.cliente].numeroVendasContados.add(numeroVendaNormalizado);
+          clientesMap[ficha.cliente].total_pedidos++;
+        }
+      } else {
+        clientesMap[ficha.cliente].total_pedidos++;
+      }
 
       if (ficha.produtos) {
         try {

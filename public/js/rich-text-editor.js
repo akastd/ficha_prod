@@ -3,6 +3,9 @@
 
   let editor = null;
   let currentColor = '#000000';
+  let safeUndoHtml = null;
+  let lastSafeAutoFillHtml = null;
+  let pendingSafeUndo = false;
 
   function initRichTextEditor() {
     const observacoesContainer = document.querySelector('.form-group:has(#observacoes)');
@@ -247,6 +250,16 @@
     window.richTextEditor = {
       getContent: () => editor.innerHTML,
       setContent: (html) => {
+        pendingSafeUndo = false;
+        safeUndoHtml = null;
+        lastSafeAutoFillHtml = null;
+        editor.innerHTML = html;
+        oldTextarea.value = html;
+      },
+      setContentWithSafeUndo: (html) => {
+        safeUndoHtml = editor.innerHTML;
+        lastSafeAutoFillHtml = html;
+        pendingSafeUndo = true;
         editor.innerHTML = html;
         oldTextarea.value = html;
       },
@@ -254,8 +267,30 @@
     };
   }
 
+  function tryApplySafeUndo() {
+    if (!pendingSafeUndo) return false;
+
+    const current = (editor?.innerHTML || '').trim();
+    const autoFill = (lastSafeAutoFillHtml || '').trim();
+    if (current !== autoFill) return false;
+
+    editor.innerHTML = safeUndoHtml || '';
+
+    const oldTextarea = document.getElementById('observacoes');
+    if (oldTextarea) oldTextarea.value = editor.innerHTML;
+
+    pendingSafeUndo = false;
+    safeUndoHtml = null;
+    lastSafeAutoFillHtml = null;
+
+    editor.classList.add('format-applied');
+    setTimeout(() => editor.classList.remove('format-applied'), 300);
+    return true;
+  }
+
   function executeCommand(command, value = null) {
     editor.focus();
+    if (command === 'undo' && tryApplySafeUndo()) return;
     document.execCommand(command, false, value);
     editor.classList.add('format-applied');
     setTimeout(() => editor.classList.remove('format-applied'), 300);

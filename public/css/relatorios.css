@@ -226,6 +226,32 @@
   color: var(--rel-info-light);
 }
 
+.equipe-resumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--rel-gap-md);
+}
+
+.equipe-resumo-item {
+  background: var(--rel-bg);
+  border: 1px solid var(--rel-border);
+  border-radius: var(--rel-radius-md);
+  padding: var(--rel-gap-lg);
+}
+
+.equipe-resumo-label {
+  font-size: 0.82rem;
+  color: var(--rel-text-soft);
+  margin-bottom: 6px;
+}
+
+.equipe-resumo-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--rel-primary);
+  line-height: 1;
+}
+
 /* ==================== TAXA DE ENTREGA ==================== */
 .taxa-container {
   display: flex;
@@ -336,6 +362,53 @@
   flex-direction: column;
   gap: var(--rel-gap-md);
   padding: var(--rel-gap-sm) 0;
+}
+
+.relatorio-vendedores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vendedores-report-header,
+.vendedores-report-row {
+  display: grid;
+  grid-template-columns: 2fr repeat(5, minmax(70px, 1fr));
+  gap: 10px;
+  align-items: center;
+}
+
+.vendedores-report-header {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--rel-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rel-border);
+  margin-bottom: 5px;
+}
+
+.vendedores-report-row {
+  padding: 10px 12px;
+  background: var(--rel-bg);
+  border: 1px solid var(--rel-border);
+  border-radius: var(--rel-radius-sm);
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.vendedores-report-row:last-child {
+  margin-bottom: 0;
+}
+
+.vendedores-report-row:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.vendedores-report-name {
+  font-weight: 600;
+  color: var(--rel-primary);
 }
 
 .ranking-item {
@@ -541,15 +614,121 @@
 /* ==================== GRÁFICO DE TAMANHOS ==================== */
 .tamanhos-chart {
   padding: var(--rel-gap-xl);
+  max-height: 420px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.tamanhos-bars {
+.tamanhos-horizontal-list {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-  gap: var(--rel-gap-md);
-  height: 200px;
-  padding: var(--rel-gap-xl) 10px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tamanho-horizontal-item {
+  background: var(--rel-bg);
+  border: 1px solid var(--rel-border);
+  border-radius: var(--rel-radius-sm);
+  padding: 10px 12px;
+}
+
+.tamanho-horizontal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tamanho-horizontal-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--rel-text);
+}
+
+.tamanho-horizontal-value {
+  font-size: 0.82rem;
+  color: var(--rel-text-soft);
+  font-weight: 600;
+}
+
+.tamanho-horizontal-track {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.tamanho-horizontal-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--rel-info), #60a5fa);
+  border-radius: 999px;
+}
+
+.materiais-horizontal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#materiaisContainer {
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.material-horizontal-item {
+  background: var(--rel-bg);
+  border: 1px solid var(--rel-border);
+  border-radius: var(--rel-radius-sm);
+  padding: 10px 12px;
+}
+
+.material-horizontal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.material-horizontal-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--rel-text);
+}
+
+.material-horizontal-value {
+  font-size: 0.82rem;
+  color: var(--rel-text-soft);
+  font-weight: 600;
+}
+
+.material-horizontal-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--rel-text-soft);
+  margin-bottom: 6px;
+}
+
+.material-horizontal-track {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.material-horizontal-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--rel-success), #34d399);
+  border-radius: 999px;
 }
 
 .tamanho-bar-container {
@@ -731,6 +910,23 @@
 
   .ranking-stats {
     gap: var(--rel-gap-sm);
+  }
+
+  .equipe-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .vendedores-report-header {
+    display: none;
+  }
+
+  .vendedores-report-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .vendedores-report-name {
+    grid-column: 1 / -1;
   }
 
   .tamanhos-bars {

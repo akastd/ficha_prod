@@ -66,6 +66,13 @@ header h1 {
   font-weight: 600;
 }
 
+.header-edit-id {
+  font-size: 0.72em;
+  font-weight: 500;
+  opacity: 0.88;
+  vertical-align: middle;
+}
+
 header p {
   margin: 0;
   font-size: 0.95rem;
@@ -261,6 +268,58 @@ textarea.form-control {
   background: #bbf7d0;
 }
 
+.toast-limite-produtos {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+  z-index: 10000;
+  max-width: 460px;
+  width: calc(100% - 32px);
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.toast-limite-produtos__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  flex: 1;
+}
+
+.toast-limite-produtos__close {
+  border: none;
+  background: transparent;
+  color: #9a3412;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.toast-limite-produtos__close:hover {
+  background: rgba(154, 52, 18, 0.08);
+}
+
+@media print {
+  .toast-global,
+  .toast-custom,
+  .toast-limite-produtos {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
 .btn-secondary {
   background: #e5e7eb;
   color: #111827;
@@ -290,6 +349,75 @@ textarea.form-control {
 
 .btn-icon {
   padding-inline: 10px;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+.observacoes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.observacoes-header label {
+  margin-bottom: 0;
+}
+
+.confirm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.confirm-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.confirm-modal-content {
+  position: relative;
+  width: min(460px, calc(100vw - 32px));
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+}
+
+.confirm-modal-content h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.confirm-modal-content h3 i {
+  color: #d97706;
+}
+
+.confirm-modal-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .actions {
@@ -467,10 +595,31 @@ body.preview-impressao .print-grid-single {
   row-gap: 8px;
 }
 
+body.preview-impressao .print-grid-single .print-group-separator {
+  border-top: 1px solid #cbd5e1;
+  margin: 2px 0;
+  padding-top: 4px;
+}
+
 body.preview-impressao .print-grid .label,
 body.preview-impressao .print-grid-single .label {
   font-weight: 600;
   color: #334155;
+}
+
+body.preview-impressao .print-grid .label i,
+body.preview-impressao .print-grid-single .label i {
+  margin-right: 4px;
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
+body.preview-impressao #print-dataInicio {
+  color: #999999;
+}
+
+body.preview-impressao #print-dataEntrega {
+  font-weight: 700;
 }
 
 body.preview-impressao .print-two-cols {
@@ -529,6 +678,19 @@ body.preview-impressao .print-observacoes {
 }
 
 @media print {
+  :root {
+    --print-page-height: 297mm;
+    --print-page-margin: 6mm;
+    --print-content-height: calc(var(--print-page-height) - (var(--print-page-margin) * 2));
+    --print-compact-scale: 0.92;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
   body {
     background: white;
   }
@@ -542,19 +704,27 @@ body.preview-impressao .print-observacoes {
   }
 
   .print-container {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: var(--print-content-height);
     padding: 0;
     margin: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
     font-size: 12px;
     color: #111827;
   }
 
   .print-header {
     text-align: center;
-    margin-bottom: -3mm;
+    margin: 0 0 1.5mm;
+    flex: 0 0 auto;
   }
 
   .print-header h1 {
-    font-size: 16px;
+    font-size: 12px;
     margin: 0 0 2px;
   }
 
@@ -567,11 +737,16 @@ body.preview-impressao .print-observacoes {
     border: 0.5mm solid #000000;
     border-radius: 6px;
     padding: 2mm 2.5mm;
-    margin-bottom: 2mm;
+    margin: 0;
+    flex: 0 0 auto;
+  }
+
+  #print-version > * + * {
+    margin-top: 1.5mm;
   }
 
   .print-card h2 {
-    font-size: 13px;
+    font-size: 12px;
     margin: 0 0 1.5mm;
     font-weight: 600;
   }
@@ -589,8 +764,29 @@ body.preview-impressao .print-observacoes {
     row-gap: 1mm;
   }
 
+  .print-grid-single .print-group-separator {
+    border-top: 0.3mm solid #b0b0b0;
+    margin: 0.8mm 0;
+    padding-top: 0.8mm;
+  }
+
   .print-grid .label {
     font-weight: 600;
+  }
+
+  .print-grid .label i,
+  .print-grid-single .label i {
+    margin-right: 0.8mm;
+    font-size: 0.9em;
+    opacity: 0.85;
+  }
+
+  #print-dataInicio {
+    color: #999999 !important;
+  }
+
+  #print-dataEntrega {
+    font-weight: 700;
   }
 
   .print-row-wide {
@@ -601,12 +797,14 @@ body.preview-impressao .print-observacoes {
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: 3mm;
+    flex: 0 0 auto;
+    min-height: 0;
   }
 
   .print-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .print-table th,
@@ -624,13 +822,104 @@ body.preview-impressao .print-observacoes {
     margin-top: 1mm;
     text-align: left;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 12px;
   }
 
   .print-observacoes {
     min-height: 10mm;
     white-space: pre-line;
     font-size: 12px;
+  }
+
+  #print-imagesSection {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 18mm;
+  }
+
+  #print-imagesContainer {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    gap: 8px;
+    align-content: start;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  }
+
+  #print-imagesContainer.compact-four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #print-version.print-compact {
+    font-size: calc(12px * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-header {
+    margin: 0 0 calc(1.5mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-header h1 {
+    font-size: calc(12px * var(--print-compact-scale));
+    margin: 0 0 calc(2px * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-header p {
+    font-size: calc(12px * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-card {
+    padding: calc(2mm * var(--print-compact-scale)) calc(2.5mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact > * + * {
+    margin-top: calc(1.5mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-card h2 {
+    font-size: calc(12px * var(--print-compact-scale));
+    margin: 0 0 calc(1.5mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-grid {
+    column-gap: calc(1.5mm * var(--print-compact-scale));
+    row-gap: calc(1mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-grid-single {
+    row-gap: calc(1mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-grid-single .print-group-separator {
+    margin: calc(0.8mm * var(--print-compact-scale)) 0;
+    padding-top: calc(0.8mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-two-cols {
+    column-gap: calc(3mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-table {
+    font-size: calc(12px * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-table th,
+  #print-version.print-compact .print-table td {
+    padding: calc(0.5mm * var(--print-compact-scale)) calc(1mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-total {
+    margin-top: calc(1mm * var(--print-compact-scale));
+    font-size: calc(12px * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-observacoes {
+    min-height: calc(10mm * var(--print-compact-scale));
+    font-size: calc(12px * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact #print-imagesSection {
+    min-height: calc(18mm * var(--print-compact-scale));
   }
 
   .print-image-container {

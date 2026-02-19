@@ -60,6 +60,29 @@
     return fichaForm;
   }
 
+  function atualizarTituloEdicao(id, clienteNome) {
+    const header = document.querySelector('header h1');
+    if (!header) return;
+
+    const nomeBase = (clienteNome || document.getElementById('cliente')?.value || '').trim();
+    const nomeExibicao = nomeBase ? nomeBase.toUpperCase() : 'SEM_CLIENTE';
+
+    header.innerHTML = '';
+
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-edit';
+
+    const texto = document.createTextNode(` Editando Ficha de ${nomeExibicao} `);
+
+    const idSpan = document.createElement('span');
+    idSpan.className = 'header-edit-id';
+    idSpan.textContent = `[#${id}]`;
+
+    header.appendChild(icon);
+    header.appendChild(texto);
+    header.appendChild(idSpan);
+  }
+
   document.addEventListener('DOMContentLoaded', async () => {
     await initDatabaseIntegration();
   });
@@ -264,10 +287,7 @@
         novaUrl.searchParams.set('editar', id);
         window.history.replaceState({}, '', novaUrl);
 
-        const header = document.querySelector('header h1');
-        if (header) {
-          header.innerHTML = `<i class="fas fa-edit"></i> Editando Ficha #${fichaAtualId}`;
-        }
+        atualizarTituloEdicao(fichaAtualId, dados.cliente);
 
         configurarBotoesAcao();
       }
@@ -390,10 +410,7 @@
         configurarBotoesAcao();
       }, 100);
 
-      const header = document.querySelector('header h1');
-      if (header) {
-        header.innerHTML = `<i class="fas fa-edit"></i> Editando Ficha #${id}`;
-      }
+      atualizarTituloEdicao(id, ficha.cliente);
 
     } catch (error) {
       mostrarToast('Erro ao carregar ficha para edição', 'error');

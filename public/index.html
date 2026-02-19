@@ -422,7 +422,13 @@
                     </div>
 
                     <div class="form-group" style="margin-top: 16px;">
-                        <label for="observacoes"><i class="fas fa-note-sticky" aria-hidden="true"></i> Observações</label>
+                        <div class="observacoes-header">
+                            <label for="observacoes"><i class="fas fa-note-sticky" aria-hidden="true"></i> Observações</label>
+                            <button type="button" id="btnAutopreencherObservacoes" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                                Auto-preencher
+                            </button>
+                        </div>
                         <textarea id="observacoes" class="form-control" rows="3"
                             placeholder="Ex: Algumas camisetas com manga longa, outras com manga curta..."
                             style="display: none;"></textarea>
@@ -475,21 +481,20 @@
         </header>
 
         <section class="print-card">
-            <h2>Dados do Pedido</h2>
+            <h2><i class="fas fa-clipboard-list" aria-hidden="true"></i> Dados do Pedido</h2>
             <div class="print-grid">
-                <div><span class="label">Cliente:</span> <span id="print-cliente"></span></div>
-                <div><span class="label">Nº Venda:</span> <span id="print-numeroVenda"></span></div>
-                <div><span class="label">Vendedor:</span> <span id="print-vendedor"></span></div>
-                <div><span class="label">Entrega:</span> <span id="print-dataEntrega"></span></div>
-                <div><span class="label">Início:</span> <span id="print-dataInicio" style="color: #777777"></span></div>
-                <div><span class="label">Evento:</span> <span id="print-evento"></span></div>
-                <div><span class="label">Prazo:</span> <span id="print-prazo"></span></div>
+                <div><span class="label"><i class="fas fa-user" aria-hidden="true"></i> Cliente:</span> <span id="print-cliente"></span></div>
+                <div><span class="label"><i class="fas fa-hashtag" aria-hidden="true"></i> Nº Venda:</span> <span id="print-numeroVenda"></span></div>
+                <div><span class="label"><i class="fas fa-user-tie" aria-hidden="true"></i> Vendedor:</span> <span id="print-vendedor"></span></div>
+                <div><span class="label"><i class="fas fa-calendar-check" aria-hidden="true"></i> Entrega:</span> <span id="print-dataEntrega"></span></div>
+                <div><span class="label"><i class="fas fa-calendar-day" aria-hidden="true"></i> Início:</span> <span id="print-dataInicio"></span></div>
+                <div><span class="label"><i class="fas fa-star" aria-hidden="true"></i> Evento:</span> <span id="print-evento"></span></div>
             </div>
         </section>
 
         <div class="print-two-cols">
             <section class="print-card">
-                <h2>Produtos</h2>
+                <h2><i class="fas fa-boxes-stacked" aria-hidden="true"></i> Produtos</h2>
                 <table class="print-table">
                     <thead>
                         <tr>
@@ -506,68 +511,80 @@
             </section>
 
             <section class="print-card">
-                <h2>Especificações Técnicas</h2>
+                <h2><i class="fas fa-cogs" aria-hidden="true"></i> Especificações Técnicas</h2>
                 <div class="print-grid-single">
-                    <div><span class="label">Material:</span> <span id="print-material"></span></div>
-                    <div><span class="label">Cor Material:</span> <span id="print-corMaterial"></span></div>
-                    <div><span class="label">Tipo Manga:</span> <span id="print-manga"></span></div>
-                    <div><span class="label">Acab. Manga:</span> <span id="print-acabamentoManga"></span></div>
-                    <div id="print-larguraMangaDiv" style="display: none;"><span class="label">Largura Acab.
+                    <div><span class="label"><i class="fas fa-rug" aria-hidden="true"></i> Material:</span> <span id="print-material"></span></div>
+                    <div><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Material:</span> <span id="print-corMaterial"></span></div>
+
+                    <div class="print-group-separator" aria-hidden="true"></div>
+
+                    <div><span class="label"><i class="fas fa-bread-slice" aria-hidden="true"></i> Tipo Manga:</span> <span id="print-manga"></span></div>
+                    <div><span class="label"><i class="fas fa-sliders" aria-hidden="true"></i> Acab. Manga:</span> <span id="print-acabamentoManga"></span></div>
+                    <div id="print-larguraMangaDiv" style="display: none;"><span class="label"><i class="fas fa-ruler" aria-hidden="true"></i> Largura Acab.
                             Manga:</span> <span id="print-larguraManga"></span></div>
-                    <div id="print-corAcabamentoMangaDiv" style="display: none;"><span class="label">Cor Acab.
+                    <div id="print-corAcabamentoMangaDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Acab.
                             Manga:</span> <span id="print-corAcabamentoManga"></span></div>
-                    <div><span class="label">Tipo Gola:</span> <span id="print-gola"></span></div>
-                    <div id="print-corGolaDiv" style="display: none;"><span class="label">Cor da Gola:</span> <span
+
+                    <div class="print-group-separator" aria-hidden="true"></div>
+
+                    <div><span class="label"><i class="fas fa-ring" aria-hidden="true"></i> Tipo Gola:</span> <span id="print-gola"></span></div>
+                    <div id="print-corGolaDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor da Gola:</span> <span
                             id="print-corGola"></span></div>
-                    <div id="print-acabamentoGolaDiv"><span class="label">Acab. Gola:</span> <span
+                    <div id="print-acabamentoGolaDiv"><span class="label"><i class="fas fa-sliders" aria-hidden="true"></i> Acab. Gola:</span> <span
                             id="print-acabamentoGola"></span></div>
-                    <div id="print-larguraGolaDiv" style="display: none;"><span class="label">Largura Acab. Gola:</span>
+                    <div id="print-larguraGolaDiv" style="display: none;"><span class="label"><i class="fas fa-ruler" aria-hidden="true"></i> Largura Acab. Gola:</span>
                         <span id="print-larguraGola"></span>
                     </div>
-                    <div id="print-reforcoGolaDiv" style="display: none;"><span class="label">Reforço na Gola:</span>
+                    <div id="print-reforcoGolaDiv" style="display: none;"><span class="label"><i class="fas fa-shield-halved" aria-hidden="true"></i> Reforço na Gola:</span>
                         <span id="print-reforcoGola"></span>
                     </div>
-                    <div id="print-corReforcoDiv" style="display: none;"><span class="label">Cor do Reforço:</span>
+                    <div id="print-corReforcoDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor do Reforço:</span>
                         <span id="print-corReforco"></span>
                     </div>
-                    <div id="print-corPeitilhoInternoDiv" style="display: none;"><span class="label">Cor Peitilho
+                    <div id="print-corPeitilhoInternoDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Peitilho
                             Interno:</span> <span id="print-corPeitilhoInterno"></span></div>
-                    <div id="print-corPeitilhoExternoDiv" style="display: none;"><span class="label">Cor Peitilho
+                    <div id="print-corPeitilhoExternoDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Peitilho
                             Externo:</span> <span id="print-corPeitilhoExterno"></span></div>
-                    <div id="print-corBotaoDiv" style="display: none;"><span class="label">Cor do Botão:</span> <span
+                    <div id="print-corBotaoDiv" style="display: none;"><span class="label"><i class="fas fa-circle" aria-hidden="true"></i> Cor do Botão:</span> <span
                             id="print-corBotao"></span></div>
-                    <div id="print-corPeDeGolaInternoDiv" style="display: none;"><span class="label">Cor Pé de Gola
+                    <div id="print-corPeDeGolaInternoDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Pé de Gola
                             Interno:</span> <span id="print-corPeDeGolaInterno"></span></div>
-                    <div id="print-corPeDeGolaExternoDiv" style="display: none;"><span class="label">Cor Pé de Gola
+                    <div id="print-corPeDeGolaExternoDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Pé de Gola
                             Externo:</span> <span id="print-corPeDeGolaExterno"></span></div>
-                    <div id="print-aberturaLateralDiv" style="display: none;"><span class="label">Abertura
+                    <div id="print-aberturaLateralDiv" style="display: none;"><span class="label"><i class="fas fa-arrows-left-right" aria-hidden="true"></i> Abertura
                             Lateral:</span> <span id="print-aberturaLateral"></span></div>
-                    <div id="print-corAberturaLateralDiv" style="display: none;"><span class="label">Cor Abertura
+                    <div id="print-corAberturaLateralDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Abertura
                             Lateral:</span> <span id="print-corAberturaLateral"></span></div>
-                    <div><span class="label">Bolso:</span> <span id="print-bolso"></span></div>
-                    <div><span class="label">Filete:</span> <span id="print-filete"></span></div>
-                    <div id="print-fileteLocalDiv" style="display: none;"><span class="label">Local Filete:</span> <span
+
+                    <div class="print-group-separator" aria-hidden="true"></div>
+
+                    <div><span class="label"><i class="fas fa-shield" aria-hidden="true"></i> Bolso:</span> <span id="print-bolso"></span></div>
+                    <div><span class="label"><i class="fas fa-bezier-curve" aria-hidden="true"></i> Filete:</span> <span id="print-filete"></span></div>
+                    <div id="print-fileteLocalDiv" style="display: none;"><span class="label"><i class="fas fa-location-dot" aria-hidden="true"></i> Local Filete:</span> <span
                             id="print-fileteLocal"></span></div>
-                    <div id="print-fileteCorDiv" style="display: none;"><span class="label">Cor Filete:</span> <span
+                    <div id="print-fileteCorDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Filete:</span> <span
                             id="print-fileteCor"></span></div>
-                    <div><span class="label">Faixa Refletiva:</span> <span id="print-faixa"></span></div>
-                    <div id="print-faixaLocalDiv" style="display: none;"><span class="label">Local Faixa:</span> <span
+                    <div><span class="label"><i class="fas fa-grip-lines" aria-hidden="true"></i> Faixa Refletiva:</span> <span id="print-faixa"></span></div>
+                    <div id="print-faixaLocalDiv" style="display: none;"><span class="label"><i class="fas fa-location-dot" aria-hidden="true"></i> Local Faixa:</span> <span
                             id="print-faixaLocal"></span></div>
-                    <div id="print-faixaCorDiv" style="display: none;"><span class="label">Cor Faixa:</span> <span
+                    <div id="print-faixaCorDiv" style="display: none;"><span class="label"><i class="fas fa-palette" aria-hidden="true"></i> Cor Faixa:</span> <span
                             id="print-faixaCor"></span></div>
-                    <div><span class="label">Personalização:</span> <span id="print-arte"></span></div>
-                    <div><span class="label">Composição:</span> <span id="print-composicao"></span></div>
+
+                    <div class="print-group-separator" aria-hidden="true"></div>
+
+                    <div><span class="label"><i class="fas fa-paint-brush" aria-hidden="true"></i> Personalização:</span> <span id="print-arte"></span></div>
+                    <div><span class="label"><i class="fas fa-tag" aria-hidden="true"></i> Composição:</span> <span id="print-composicao"></span></div>
                 </div>
             </section>
         </div>
 
         <section class="print-card">
-            <h2>Observações</h2>
+            <h2><i class="fas fa-note-sticky" aria-hidden="true"></i> Observações</h2>
             <div id="print-observacoes" class="print-observacoes"></div>
         </section>
 
         <section class="print-card" id="print-imagesSection">
-            <h2>Layout / Mockup do Produto</h2>
+            <h2><i class="fas fa-images" aria-hidden="true"></i> Layout / Mockup do Produto</h2>
             <div id="print-imagesContainer" class="print-images-container"></div>
         </section>
     </div>

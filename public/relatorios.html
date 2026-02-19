@@ -119,20 +119,21 @@
 
             <!-- DETALHES ADICIONAIS -->
             <div class="two-columns">
-                <!-- TOP VENDEDOR -->
+                <!-- COBERTURA DA EQUIPE -->
                 <section class="card">
                     <div class="card-header">
-                        <i class="fas fa-trophy"></i>
-                        <span>Vendedor Destaque</span>
+                        <i class="fas fa-users"></i>
+                        <span>Cobertura da Equipe</span>
                     </div>
                     <div class="card-body">
-                        <div class="top-vendedor">
-                            <div class="vendedor-icon">
-                                <i class="fas fa-user-tie"></i>
+                        <div class="equipe-resumo">
+                            <div class="equipe-resumo-item">
+                                <div class="equipe-resumo-label">Vendedores Ativos</div>
+                                <div class="equipe-resumo-value" id="equipeVendedoresAtivos">0</div>
                             </div>
-                            <div class="vendedor-info">
-                                <div class="vendedor-nome" id="topVendedorNome">-</div>
-                                <div class="vendedor-stats" id="topVendedorStats">0 fichas</div>
+                            <div class="equipe-resumo-item">
+                                <div class="equipe-resumo-label">Fichas no Período</div>
+                                <div class="equipe-resumo-value" id="equipeFichasPeriodo">0</div>
                             </div>
                         </div>
                     </div>
@@ -166,7 +167,7 @@
             <section class="card">
                 <div class="card-header">
                     <i class="fas fa-users"></i>
-                    <span>Análise por Vendedor</span>
+                    <span>Resumo por Vendedor</span>
                     <div class="card-header-actions">
                         <select id="filtroVendedor" class="filter-select">
                             <option value="">Todos os vendedores</option>
@@ -177,7 +178,7 @@
                     <div id="vendedoresLoading" class="loading-placeholder">
                         <i class="fas fa-spinner fa-spin"></i> Carregando...
                     </div>
-                    <div id="vendedoresContainer" class="ranking-list" style="display: none;">
+                    <div id="vendedoresContainer" class="relatorio-vendedores-list" style="display: none;">
                         <!-- Dados dos vendedores serão inseridos via JS -->
                     </div>
                     <div id="vendedoresEmpty" class="empty-placeholder" style="display: none;">
@@ -335,3 +336,4 @@
 </body>
 
 </html>
+

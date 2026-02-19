@@ -8,6 +8,7 @@
   let relatorioAtual = null;
   let dadosVendedores = [];
   let dadosMateriais = [];
+  let catalogoTamanhos = null;
 
   document.addEventListener('DOMContentLoaded', async () => {
     await initRelatorios();
@@ -18,6 +19,8 @@
       if (typeof db !== 'undefined' && db.init) {
         await db.init();
       }
+
+      await carregarCatalogoTamanhos();
 
       initEventListeners();
       await carregarRelatorio();
@@ -82,6 +85,23 @@
     return params;
   }
 
+  async function carregarCatalogoTamanhos() {
+    try {
+      const response = await fetch('data/catalogo.json');
+      if (!response.ok) throw new Error('Erro ao carregar catálogo');
+
+      const catalogo = await response.json();
+      const lista = Array.isArray(catalogo?.tamanhos) ? catalogo.tamanhos : [];
+      catalogoTamanhos = new Set(lista.map(t => normalizarTamanho(t)));
+    } catch (error) {
+      catalogoTamanhos = null;
+    }
+  }
+
+  function normalizarTamanho(valor) {
+    return String(valor || '').trim().toUpperCase();
+  }
+
   async function carregarRelatorio() {
     try {
       if (periodoAtual === 'customizado') {
@@ -102,7 +122,6 @@
       relatorioAtual = await response.json();
 
       atualizarEstatisticas(relatorioAtual);
-      atualizarVendedorDestaque(relatorioAtual);
       atualizarTaxaEntrega(relatorioAtual);
 
       await Promise.all([
@@ -133,19 +152,18 @@
     if (statNovosClientes) statNovosClientes.textContent = dados.novosClientes || 0;
   }
 
-  function atualizarVendedorDestaque(dados) {
-    const nomeEl = document.getElementById('topVendedorNome');
-    const statsEl = document.getElementById('topVendedorStats');
+  function atualizarResumoEquipe(vendedores) {
+    const vendedoresAtivosEl = document.getElementById('equipeVendedoresAtivos');
+    const fichasPeriodoEl = document.getElementById('equipeFichasPeriodo');
+    if (!vendedoresAtivosEl || !fichasPeriodoEl) return;
 
-    if (!nomeEl || !statsEl) return;
+    const vendedoresAtivos = Array.isArray(vendedores) ? vendedores.length : 0;
+    const fichasNoPeriodo = Array.isArray(vendedores)
+      ? vendedores.reduce((soma, v) => soma + (v.totalPedidos || 0), 0)
+      : 0;
 
-    if (dados.topVendedor) {
-      nomeEl.textContent = dados.topVendedor;
-      statsEl.textContent = `${dados.topVendedorTotal || 0} ${(dados.topVendedorTotal || 0) === 1 ? 'ficha' : 'fichas'}`;
-    } else {
-      nomeEl.textContent = 'Nenhum vendedor';
-      statsEl.textContent = '0 fichas';
-    }
+    vendedoresAtivosEl.textContent = formatarNumero(vendedoresAtivos);
+    fichasPeriodoEl.textContent = formatarNumero(fichasNoPeriodo);
   }
 
   function atualizarTaxaEntrega(dados) {
@@ -206,7 +224,7 @@
         pendentes: Math.max(0, (v.total_pedidos || v.totalPedidos || 0) - (v.entregues || 0))
       }));
 
-      dadosVendedores.sort((a, b) => b.totalPedidos - a.totalPedidos);
+      dadosVendedores.sort((a, b) => String(a.vendedor || '').localeCompare(String(b.vendedor || ''), 'pt-BR'));
 
       if (select) {
         select.innerHTML = '<option value="">Todos os vendedores</option>';
@@ -223,10 +241,12 @@
         if (container) container.style.display = 'block';
         renderizarVendedores(dadosVendedores);
       }
+      atualizarResumoEquipe(dadosVendedores);
 
     } catch (error) {
       if (loading) loading.style.display = 'none';
       if (empty) empty.style.display = 'block';
+      atualizarResumoEquipe([]);
     }
   }
 
@@ -240,34 +260,31 @@
       return;
     }
 
-    const maxItens = Math.max(...vendedores.map(v => v.totalItens || 0), 1);
+    container.innerHTML = `
+      <div class="vendedores-report-header">
+        <span>Vendedor</span>
+        <span>Fichas</span>
+        <span>Itens</span>
+        <span>Entregues</span>
+        <span>Pendentes</span>
+        <span>Taxa de Entrega</span>
+      </div>
+      ${vendedores.map(v => {
+        const taxaEntrega = v.totalPedidos > 0 ? Math.min(100, Math.round((v.entregues / v.totalPedidos) * 100)) : 0;
+        const taxaClass = taxaEntrega >= 80 ? 'taxa-alta' : taxaEntrega >= 50 ? 'taxa-media' : 'taxa-baixa';
 
-    container.innerHTML = vendedores.map((v, index) => {
-      const porcentagemBarra = maxItens > 0 ? ((v.totalItens || 0) / maxItens * 100) : 0;
-      const taxaEntrega = v.totalPedidos > 0 ? Math.min(100, Math.round((v.entregues / v.totalPedidos) * 100)) : 0;
-      const taxaClass = taxaEntrega >= 80 ? 'taxa-alta' : taxaEntrega >= 50 ? 'taxa-media' : 'taxa-baixa';
-
-      return `
-        <div class="ranking-item ${index < 3 ? 'top-' + (index + 1) : ''}">
-          <div class="ranking-position">${index + 1}º</div>
-          <div class="ranking-info">
-            <div class="ranking-header">
-              <span class="ranking-name">${escapeHtml(v.vendedor)}</span>
-              <span class="ranking-badge ${taxaClass}">${taxaEntrega}% entrega</span>
-            </div>
-            <div class="ranking-stats">
-              <span><i class="fas fa-file-alt"></i> ${v.totalPedidos || 0} fichas</span>
-              <span><i class="fas fa-tshirt"></i> ${formatarNumero(v.totalItens || 0)} itens</span>
-              <span><i class="fas fa-check-circle"></i> ${Math.min(v.entregues || 0, v.totalPedidos || 0)} entregues</span>
-              <span><i class="fas fa-clock"></i> ${v.pendentes || 0} pendentes</span>
-            </div>
-            <div class="ranking-bar">
-              <div class="ranking-bar-fill" style="width: ${porcentagemBarra}%"></div>
-            </div>
+        return `
+          <div class="vendedores-report-row">
+            <span class="vendedores-report-name">${escapeHtml(v.vendedor)}</span>
+            <span>${v.totalPedidos || 0}</span>
+            <span>${formatarNumero(v.totalItens || 0)}</span>
+            <span>${Math.min(v.entregues || 0, v.totalPedidos || 0)}</span>
+            <span>${v.pendentes || 0}</span>
+            <span><span class="ranking-badge ${taxaClass}">${taxaEntrega}%</span></span>
           </div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('')}
+    `;
   }
 
   function filtrarPorVendedor(vendedor) {
@@ -333,31 +350,32 @@
     }
 
     const totalItens = materiais.reduce((sum, m) => sum + (m.totalItens || 0), 0);
+    const maxItens = Math.max(...materiais.map(m => m.totalItens || 0), 1);
 
-    container.innerHTML = materiais.map((m, index) => {
+    container.innerHTML = `
+      <div class="materiais-horizontal-list">
+        ${materiais.map(m => {
       const porcentagem = totalItens > 0 ? ((m.totalItens || 0) / totalItens * 100) : 0;
-      const cores = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-      const cor = cores[index % cores.length];
+      const largura = maxItens > 0 ? ((m.totalItens || 0) / maxItens * 100) : 0;
 
       return `
-        <div class="ranking-item material-item">
-          <div class="ranking-position" style="background: ${cor}; color: white;">${index + 1}º</div>
-          <div class="ranking-info">
-            <div class="ranking-header">
-              <span class="ranking-name">${escapeHtml(m.material)}</span>
-              <span class="ranking-value">${formatarNumero(m.totalItens || 0)} itens</span>
+          <div class="material-horizontal-item" title="${escapeHtml(m.material)}: ${formatarNumero(m.totalItens || 0)} itens (${porcentagem.toFixed(1)}%)">
+            <div class="material-horizontal-header">
+              <span class="material-horizontal-label">${escapeHtml(m.material)}</span>
+              <span class="material-horizontal-value">${formatarNumero(m.totalItens || 0)} itens</span>
             </div>
-            <div class="ranking-stats">
-              <span><i class="fas fa-file-alt"></i> ${m.totalPedidos || 0} fichas</span>
-              <span><i class="fas fa-percentage"></i> ${porcentagem.toFixed(1)}% do total</span>
+            <div class="material-horizontal-meta">
+              <span>${m.totalPedidos || 0} fichas</span>
+              <span>${porcentagem.toFixed(1)}% do total</span>
             </div>
-            <div class="ranking-bar">
-              <div class="ranking-bar-fill" style="width: ${porcentagem}%; background: ${cor};"></div>
+            <div class="material-horizontal-track">
+              <div class="material-horizontal-fill" style="width: ${Math.max(largura, 3)}%;"></div>
             </div>
           </div>
-        </div>
-      `;
-    }).join('');
+        `;
+    }).join('')}
+      </div>
+    `;
   }
 
   function filtrarPorMaterial(material) {
@@ -448,24 +466,34 @@
 
       const tamanhos = await response.json();
 
-      if (tamanhos.length === 0) {
+      const tamanhosFiltrados = (Array.isArray(tamanhos) ? tamanhos : [])
+        .filter(t => {
+          if (!catalogoTamanhos || catalogoTamanhos.size === 0) return true;
+          return catalogoTamanhos.has(normalizarTamanho(t?.tamanho));
+        })
+        .sort((a, b) => (b?.quantidade || 0) - (a?.quantidade || 0));
+
+      if (tamanhosFiltrados.length === 0) {
         container.innerHTML = '<div class="empty-placeholder"><i class="fas fa-ruler"></i><p>Nenhum dado de tamanho</p></div>';
         return;
       }
 
-      const maxQtd = Math.max(...tamanhos.map(t => t.quantidade || 0), 1);
-      const totalQtd = tamanhos.reduce((sum, t) => sum + (t.quantidade || 0), 0);
+      const maxQtd = Math.max(...tamanhosFiltrados.map(t => t.quantidade || 0), 1);
+      const totalQtd = tamanhosFiltrados.reduce((sum, t) => sum + (t.quantidade || 0), 0);
 
       container.innerHTML = `
-        <div class="tamanhos-bars">
-          ${tamanhos.map(t => {
-        const altura = maxQtd > 0 ? ((t.quantidade || 0) / maxQtd * 100) : 0;
+        <div class="tamanhos-horizontal-list">
+          ${tamanhosFiltrados.map(t => {
+        const largura = maxQtd > 0 ? ((t.quantidade || 0) / maxQtd * 100) : 0;
         const percent = totalQtd > 0 ? ((t.quantidade || 0) / totalQtd * 100).toFixed(1) : 0;
         return `
-              <div class="tamanho-bar-container">
-              <span class="tamanho-label">${t.tamanho}</span>
-                <div class="tamanho-bar" style="height: ${Math.max(altura, 5)}%;" title="${t.tamanho}: ${formatarNumero(t.quantidade)} (${percent}%)">
-                  <span class="tamanho-qtd">${formatarNumero(t.quantidade || 0)}</span>
+              <div class="tamanho-horizontal-item" title="${t.tamanho}: ${formatarNumero(t.quantidade)} (${percent}%)">
+                <div class="tamanho-horizontal-header">
+                  <span class="tamanho-horizontal-label">${t.tamanho}</span>
+                  <span class="tamanho-horizontal-value">${formatarNumero(t.quantidade || 0)} (${percent}%)</span>
+                </div>
+                <div class="tamanho-horizontal-track">
+                  <div class="tamanho-horizontal-fill" style="width: ${Math.max(largura, 3)}%;"></div>
                 </div>
               </div>
             `;
@@ -1356,3 +1384,5 @@
     }
   }
 })();
+
+

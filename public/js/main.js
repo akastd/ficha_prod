@@ -18,6 +18,7 @@
   };
 
   let imagens = [];
+  let alertaLimiteProdutosFechado = false;
 
   // ==================== CLOUDINARY CONFIG ====================
   let cloudinaryConfig = null;
@@ -768,6 +769,48 @@
     atualizarTotalItens();
   }
 
+  function exibirAlertaLimiteProdutos() {
+    let toast = document.getElementById('toast-limite-produtos');
+    if (toast) {
+      toast.style.display = 'flex';
+      return;
+    }
+
+    toast = document.createElement('div');
+    toast.id = 'toast-limite-produtos';
+    toast.className = 'toast-limite-produtos';
+    toast.innerHTML = `
+      <div class="toast-limite-produtos__content">
+        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+        <span>Considere dividir essa ficha em duas partes para evitar erros de impressão.</span>
+      </div>
+      <button type="button" class="toast-limite-produtos__close" aria-label="Fechar alerta">×</button>
+    `;
+
+    const btnFechar = toast.querySelector('.toast-limite-produtos__close');
+    btnFechar?.addEventListener('click', () => {
+      toast.style.display = 'none';
+      alertaLimiteProdutosFechado = true;
+    });
+
+    document.body.appendChild(toast);
+  }
+
+  function atualizarAlertaLimiteProdutos() {
+    const totalProdutos = document.querySelectorAll('#produtosTable tr').length;
+    const passouLimite = totalProdutos > 20;
+    const toast = document.getElementById('toast-limite-produtos');
+
+    if (!passouLimite) {
+      alertaLimiteProdutosFechado = false;
+      if (toast) toast.style.display = 'none';
+      return;
+    }
+
+    if (alertaLimiteProdutosFechado) return;
+    exibirAlertaLimiteProdutos();
+  }
+
   function atualizarTotalItens() {
     const quantities = document.querySelectorAll('#produtosTable .quantidade');
     let total = 0;
@@ -777,6 +820,7 @@
     });
     const totalSpan = document.getElementById('totalItens');
     if (totalSpan) totalSpan.textContent = total;
+    atualizarAlertaLimiteProdutos();
   }
 
   window.atualizarTotalItens = atualizarTotalItens;
@@ -1041,6 +1085,10 @@
 
     function renderizarImagens() {
       container.innerHTML = '';
+      container.classList.toggle('images-one', imagens.length === 1);
+      container.classList.toggle('images-two', imagens.length === 2);
+      container.classList.toggle('images-three', imagens.length === 3);
+      container.classList.toggle('images-four', imagens.length === 4);
       container.classList.toggle('compact-four', imagens.length === MAX_IMAGES);
 
       imagens.forEach((img, index) => {
@@ -1492,10 +1540,29 @@
   }
 
   // Impressão
+  function ocultarTodosToasts() {
+    const seletores = ['.toast-global', '.toast-custom', '#toast-limite-produtos'];
+    seletores.forEach(seletor => {
+      document.querySelectorAll(seletor).forEach(el => {
+        el.style.display = 'none';
+      });
+    });
+  }
 
   function initPrint() {
     const btn = document.getElementById('btnImprimir');
-    btn?.addEventListener('click', gerarVersaoImpressao);
+    btn?.addEventListener('click', () => {
+      ocultarTodosToasts();
+      gerarVersaoImpressao();
+    });
+    window.addEventListener('beforeprint', ocultarTodosToasts);
+    document.addEventListener('keydown', e => {
+      const isPrintShortcut = (e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'p';
+      if (!isPrintShortcut) return;
+      e.preventDefault();
+      ocultarTodosToasts();
+      gerarVersaoImpressao(false);
+    });
   }
 
   function formatarDataBrasil(dataISO) {
@@ -1504,7 +1571,103 @@
     return `${dia}/${mes}/${ano}`;
   }
 
-  function gerarVersaoImpressao(apenasPreview = false) {
+  function mmToPx(mm) {
+    return (mm * 96) / 25.4;
+  }
+
+  function aplicarModoCompactoSeNecessario() {
+    const printV = document.getElementById('print-version');
+    if (!printV) return;
+
+    const alturaMaxA4Px = mmToPx(297 - (6 * 2)) - 1;
+
+    printV.classList.remove('print-compact');
+    if (printV.scrollHeight <= alturaMaxA4Px) return;
+
+    printV.classList.add('print-compact');
+  }
+
+  async function aguardarImagensDaImpressao(timeoutMs = 1500) {
+    const printV = document.getElementById('print-version');
+    if (!printV) return;
+
+    const imagensPrint = Array.from(printV.querySelectorAll('img'));
+    if (imagensPrint.length === 0) return;
+
+    const promessas = imagensPrint.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        const finalizar = () => resolve();
+        img.addEventListener('load', finalizar, { once: true });
+        img.addEventListener('error', finalizar, { once: true });
+      });
+    });
+
+    await Promise.race([
+      Promise.all(promessas),
+      new Promise(resolve => setTimeout(resolve, timeoutMs))
+    ]);
+  }
+
+  function ocultarCamposSemValorNaImpressao() {
+    const printV = document.getElementById('print-version');
+    if (!printV) return;
+
+    const linhas = printV.querySelectorAll('.print-grid-single > div');
+
+    linhas.forEach(linha => {
+      if (linha.classList.contains('print-group-separator')) return;
+
+      const valorEl = linha.querySelector('[id^="print-"]');
+      if (!valorEl) return;
+
+      const textoValor = (valorEl.textContent || '').trim().toLowerCase();
+      const ocultar = !textoValor || textoValor === '-' || textoValor === 'não' || textoValor === 'nao';
+
+      if (ocultar) {
+        linha.style.display = 'none';
+        linha.dataset.autoHidden = '1';
+      } else if (linha.dataset.autoHidden === '1') {
+        linha.style.display = '';
+        delete linha.dataset.autoHidden;
+      }
+    });
+
+    const isElementoVisivel = el => {
+      if (!el) return false;
+      if (el.classList.contains('print-group-separator')) return false;
+      return el.style.display !== 'none';
+    };
+
+    const encontrarVisivelAnterior = el => {
+      let atual = el.previousElementSibling;
+      while (atual && !isElementoVisivel(atual)) {
+        atual = atual.previousElementSibling;
+      }
+      return atual;
+    };
+
+    const encontrarVisivelProximo = el => {
+      let atual = el.nextElementSibling;
+      while (atual && !isElementoVisivel(atual)) {
+        atual = atual.nextElementSibling;
+      }
+      return atual;
+    };
+
+    const separadores = printV.querySelectorAll('.print-grid-single .print-group-separator');
+    separadores.forEach(separador => {
+      const prev = encontrarVisivelAnterior(separador);
+      const next = encontrarVisivelProximo(separador);
+      const prevVisivel = !!prev;
+      const nextVisivel = !!next;
+
+      separador.style.display = (prevVisivel && nextVisivel) ? '' : 'none';
+    });
+  }
+
+  async function gerarVersaoImpressao(apenasPreview = false) {
+    ocultarTodosToasts();
     const paramsUrl = new URLSearchParams(window.location.search);
     const manterVersaoImpressao = paramsUrl.has('visualizar');
     const hoje = new Date();
@@ -1773,6 +1936,9 @@
     if (printImagesContainer) {
       printImagesContainer.innerHTML = '';
       printImagesContainer.classList.toggle('compact-four', imgs.length === MAX_IMAGES);
+      printImagesContainer.classList.toggle('images-one', imgs.length === 1);
+      printImagesContainer.classList.toggle('images-two', imgs.length === 2);
+      printImagesContainer.classList.toggle('images-three', imgs.length === 3);
 
       if (imgs.length === 0) {
         if (printImagesSection) printImagesSection.style.display = 'none';
@@ -1793,15 +1959,20 @@
       }
     }
 
+    ocultarCamposSemValorNaImpressao();
+
     const normal = document.getElementById('normal-version');
     const printV = document.getElementById('print-version');
 
     if (normal && printV) {
       normal.style.display = 'none';
       printV.style.display = 'block';
+      await aguardarImagensDaImpressao();
+      aplicarModoCompactoSeNecessario();
 
       if (apenasPreview) {
         document.body.classList.add('preview-impressao');
+        aplicarModoCompactoSeNecessario();
         if (window.parent && window.parent !== window) {
           const params = new URLSearchParams(window.location.search);
           const visualizarId = params.get('visualizar') || null;
@@ -1826,6 +1997,7 @@
         setTimeout(() => {
           normal.style.display = 'block';
           printV.style.display = 'none';
+          printV.classList.remove('print-compact');
           document.body.classList.remove('preview-impressao');
         }, 100);
       }
@@ -1836,6 +2008,58 @@
 
   function initObservacoesAutoFill() {
     let ultimoTextoAuto = '';
+
+    function abrirModalConfirmacaoAutopreencher() {
+      return new Promise(resolve => {
+        const modalExistente = document.getElementById('confirmAutopreencherModal');
+        if (modalExistente) modalExistente.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'confirmAutopreencherModal';
+        modal.className = 'confirm-modal';
+        modal.innerHTML = `
+          <div class="confirm-modal-backdrop" data-role="cancelar"></div>
+          <div class="confirm-modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmAutopreencherTitle">
+            <h3 id="confirmAutopreencherTitle"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> Confirmar auto-preenchimento</h3>
+            <p>As observações atuais serão substituídas. <strong>Você perderá tudo o que já estava escrito.</strong> Deseja continuar?</p>
+            <div class="confirm-modal-actions">
+              <button type="button" class="btn btn-secondary" data-role="cancelar">Não</button>
+              <button type="button" class="btn btn-primary" data-role="confirmar">Sim, substituir</button>
+            </div>
+          </div>
+        `;
+
+        const fechar = confirmado => {
+          modal.remove();
+          document.removeEventListener('keydown', onEsc);
+          resolve(confirmado);
+        };
+
+        const onEsc = e => {
+          if (e.key === 'Escape') fechar(false);
+        };
+
+        modal.addEventListener('click', e => {
+          const role = e.target?.dataset?.role;
+          if (role === 'cancelar') fechar(false);
+          if (role === 'confirmar') fechar(true);
+        });
+
+        document.addEventListener('keydown', onEsc);
+        document.body.appendChild(modal);
+      });
+    }
+
+    function observacoesTemConteudo() {
+      if (window.richTextEditor && typeof window.richTextEditor.getPlainText === 'function') {
+        return !!(window.richTextEditor.getPlainText() || '').trim();
+      }
+
+      const observacoesInput = document.getElementById('observacoes');
+      const raw = observacoesInput ? (observacoesInput.value || '') : '';
+      const textoLimpo = raw.replace(/<[^>]*>/g, '').trim();
+      return !!textoLimpo;
+    }
 
     function getVal(id) {
       const el = document.getElementById(id);
@@ -1868,7 +2092,7 @@
       return '';
     }
 
-    function atualizarObservacoes() {
+    function atualizarObservacoes(forcar = false) {
       if (window.__preenchendoFicha) return;
 
       const observacoesInput = document.getElementById('observacoes');
@@ -2050,12 +2274,16 @@
         ? partes.join(' / ').toUpperCase()
         : '';
 
-      if (!podeSobrescrever) return;
+      if (!forcar && !podeSobrescrever) return;
       observacoesInput.value = textoFinal;
       ultimoTextoAuto = textoFinal;
 
       if (window.richTextEditor) {
-        window.richTextEditor.setContent(textoFinal);
+        if (forcar && typeof window.richTextEditor.setContentWithSafeUndo === 'function') {
+          window.richTextEditor.setContentWithSafeUndo(textoFinal);
+        } else {
+          window.richTextEditor.setContent(textoFinal);
+        }
       }
     }
     const idsParaMonitorar = [
@@ -2079,6 +2307,20 @@
         el.addEventListener('change', atualizarObservacoes);
       }
     });
+
+    const btnAutopreencherObs = document.getElementById('btnAutopreencherObservacoes');
+    if (btnAutopreencherObs) {
+      btnAutopreencherObs.addEventListener('click', async () => {
+        if (!observacoesTemConteudo()) {
+          atualizarObservacoes(true);
+          return;
+        }
+
+        const confirmou = await abrirModalConfirmacaoAutopreencher();
+        if (!confirmou) return;
+        atualizarObservacoes(true);
+      });
+    }
 
     const tabelaBody = document.getElementById('produtosTable');
     if (tabelaBody) {

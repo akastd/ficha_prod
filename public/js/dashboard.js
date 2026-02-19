@@ -17,6 +17,11 @@
   let timeoutLoadingModal = null;
   let fichaVisualizadaId = null;
   let duplicandoFichaModal = false;
+  let modalImagem = null;
+  let imagemModalPreview = null;
+  let tituloModalImagem = null;
+  let botaoVerFichaModalImagem = null;
+  let botaoVisualizarOrigemModalImagem = null;
   const PREVIEW_READY_MESSAGE = 'ficha-preview-ready';
   let paginaAtual = 1;
   const itensPorPagina = 10;
@@ -41,6 +46,7 @@
 
   function initEventListeners() {
     initModalVisualizacao();
+    initModalImagem();
     // CORREÇÃO: Garantir que pelo menos um botão de filtro esteja ativo
     const statusFilterBtns = document.querySelectorAll('.status-filter .btn');
     
@@ -241,6 +247,25 @@
       });
     });
 
+    container.querySelectorAll('.ficha-thumb.has-image').forEach(thumb => {
+      thumb.setAttribute('role', 'button');
+      thumb.setAttribute('tabindex', '0');
+      thumb.addEventListener('click', () => {
+        const src = thumb.querySelector('img')?.getAttribute('src') || '';
+        const botaoVisualizar = obterBotaoVisualizarDaThumb(thumb);
+        const cliente = thumb.dataset.cliente || 'Cliente';
+        if (src) abrirModalImagem(src, cliente, botaoVisualizar);
+      });
+      thumb.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        const src = thumb.querySelector('img')?.getAttribute('src') || '';
+        const botaoVisualizar = obterBotaoVisualizarDaThumb(thumb);
+        const cliente = thumb.dataset.cliente || 'Cliente';
+        if (src) abrirModalImagem(src, cliente, botaoVisualizar);
+      });
+    });
+
     container.querySelectorAll('.btn-editar').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = parseInt(btn.dataset.id);
@@ -282,7 +307,8 @@
 
     return `
     <div class="ficha-item ${isPendente ? '' : 'ficha-entregue'}">
-      <div class="ficha-thumb ${miniaturaSrc ? 'has-image' : 'no-image'}">
+      <div class="ficha-thumb ${miniaturaSrc ? 'has-image' : 'no-image'}"
+        ${miniaturaSrc ? `data-id="${ficha.id}" data-cliente="${escapeHtmlAttr(clienteFormatado || 'Cliente')}"` : ''}>
         ${miniaturaSrc
         ? `<img src="${miniaturaSrc}" alt="Miniatura da ficha de ${clienteFormatado || 'cliente'}" loading="lazy">`
         : '<i class="fas fa-image" aria-hidden="true"></i>'}
@@ -511,10 +537,82 @@
     window.addEventListener('message', onPreviewFrameMessage);
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && modalVisualizacao && modalVisualizacao.style.display !== 'none') {
+      if (e.key !== 'Escape') return;
+
+      if (modalImagem && modalImagem.style.display !== 'none') {
+        fecharModalImagem();
+        return;
+      }
+
+      if (modalVisualizacao && modalVisualizacao.style.display !== 'none') {
         fecharModalVisualizacao();
       }
     });
+  }
+
+  function initModalImagem() {
+    if (modalImagem) return;
+
+    const modal = document.createElement('div');
+    modal.className = 'image-preview-modal';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+      <div class="image-preview-overlay"></div>
+      <div class="image-preview-content">
+        <div class="image-preview-header">
+          <strong class="image-preview-title">Cliente</strong>
+        </div>
+        <div class="image-preview-body">
+          <img class="image-preview-img" alt="Imagem ampliada da ficha">
+        </div>
+        <div class="image-preview-footer">
+          <button type="button" class="image-preview-open-ficha" title="Ver ficha">
+            <i class="fas fa-eye"></i>
+            <span>Ver ficha</span>
+          </button>
+        </div>
+        <button type="button" class="image-preview-close" title="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modalImagem = modal;
+    imagemModalPreview = modal.querySelector('.image-preview-img');
+    tituloModalImagem = modal.querySelector('.image-preview-title');
+    botaoVerFichaModalImagem = modal.querySelector('.image-preview-open-ficha');
+
+    modal.querySelector('.image-preview-overlay')?.addEventListener('click', fecharModalImagem);
+    modal.querySelector('.image-preview-close')?.addEventListener('click', fecharModalImagem);
+    botaoVerFichaModalImagem?.addEventListener('click', () => {
+      if (!botaoVisualizarOrigemModalImagem) return;
+      const botaoVisualizar = botaoVisualizarOrigemModalImagem;
+      fecharModalImagem();
+      botaoVisualizar.click();
+    });
+  }
+
+  function abrirModalImagem(src, cliente = 'Cliente', botaoVisualizar = null) {
+    if (!modalImagem || !imagemModalPreview) initModalImagem();
+    if (!modalImagem || !imagemModalPreview || !src) return;
+
+    botaoVisualizarOrigemModalImagem = botaoVisualizar || null;
+    if (tituloModalImagem) tituloModalImagem.textContent = cliente || 'Cliente';
+    if (botaoVerFichaModalImagem) botaoVerFichaModalImagem.disabled = !botaoVisualizarOrigemModalImagem;
+    imagemModalPreview.setAttribute('src', src);
+    modalImagem.style.display = 'flex';
+    document.body.classList.add('image-preview-open');
+  }
+
+  function fecharModalImagem() {
+    if (!modalImagem || !imagemModalPreview) return;
+
+    modalImagem.style.display = 'none';
+    botaoVisualizarOrigemModalImagem = null;
+    imagemModalPreview.setAttribute('src', '');
+    document.body.classList.remove('image-preview-open');
   }
 
   function abrirModalVisualizacao(id) {
@@ -922,6 +1020,23 @@
 
   function mostrarErro(mensagem) {
     mostrarToast(mensagem, 'error');
+  }
+
+  function escapeHtmlAttr(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function obterBotaoVisualizarDaThumb(thumb) {
+    const card = thumb?.closest('.ficha-item');
+    const botao = card?.querySelector('.btn-visualizar');
+    if (!botao) return null;
+
+    const id = Number.parseInt(botao.dataset?.id || '', 10);
+    return Number.isNaN(id) || id <= 0 ? null : botao;
   }
 })();
 

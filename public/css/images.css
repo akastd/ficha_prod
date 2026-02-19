@@ -13,8 +13,18 @@
   margin-bottom: 16px;
 }
 
+.images-grid.images-one {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.images-grid.images-two,
+.images-grid.images-three,
+.images-grid.images-four {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .images-grid.compact-four {
-  gap: 0;
+  gap: 8px;
 }
 
 .images-grid:empty {
@@ -49,6 +59,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 4/3;
+  max-height: 450px;
   background: #f3f4f6;
   overflow: hidden;
 }
@@ -256,23 +267,51 @@
 
 @media print {
   .print-images-container {
+    height: 100%;
+    width: 100%;
+    gap: 8px;
+    align-content: center;
     page-break-inside: avoid;
   }
 
   .print-image-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex: none;
+    max-width: none;
+    max-height: 100%;
     page-break-inside: avoid;
   }
 
   .print-image-item img {
-    max-height: 250px;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 55mm;
+    object-fit: contain;
   }
 
   .print-image-item.single img {
-    max-height: 350px;
+    max-height: 90mm;
+  }
+
+  .print-images-container.images-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .print-images-container.images-two .print-image-item img {
+    max-height: 55mm;
+  }
+
+  .print-images-container.compact-four {
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .print-images-container.compact-four .print-image-item img {
-    max-height: 200px;
+    max-height: 40mm;
   }
 }
 
