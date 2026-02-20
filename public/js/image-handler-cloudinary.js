@@ -263,8 +263,8 @@
       placeholder.innerHTML = `
         <div class="image-wrapper" style="display: flex; align-items: center; justify-content: center; background: #f3f4f6;">
           <div style="text-align: center; color: #6b7280;">
-            <i class="fas fa-cloud-upload-alt fa-2x fa-spin"></i>
-            <div style="margin-top: 8px; font-size: 12px;">Enviando...</div>
+            <i class="fas fa-rotate fa-2x fa-spin"></i>
+            <div style="margin-top: 8px; font-size: 12px;">Enviando Layout...</div>
           </div>
         </div>
       `;

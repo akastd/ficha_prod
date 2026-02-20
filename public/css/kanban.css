@@ -87,17 +87,6 @@
   align-self: flex-end;
 }
 
-.kanban-sidebar-hint {
-  margin: 0;
-  width: 100%;
-  font-size: 0.75rem;
-  color: var(--text-soft);
-  line-height: 1.25;
-  display: flex;
-  gap: 6px;
-  align-items: flex-start;
-}
-
 .kanban-board-card {
   margin-bottom: 0;
 }

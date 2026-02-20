@@ -379,7 +379,7 @@
     const filterDataInicio = document.getElementById('filterDataInicio');
     const filterDataFim = document.getElementById('filterDataFim');
 
-    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const searchTerm = searchInput ? normalizarTextoBusca(searchInput.value) : '';
     const dataInicio = filterDataInicio ? filterDataInicio.value : '';
     const dataFim = filterDataFim ? filterDataFim.value : '';
     
@@ -390,9 +390,9 @@
     fichasFiltradas = fichasCache.filter(ficha => {
       // Filtro de busca por texto
       if (searchTerm) {
-        const cliente = (ficha.cliente || '').toLowerCase();
-        const numeroVenda = (ficha.numero_venda || '').toLowerCase();
-        const vendedor = (ficha.vendedor || '').toLowerCase();
+        const cliente = normalizarTextoBusca(ficha.cliente);
+        const numeroVenda = normalizarTextoBusca(ficha.numero_venda);
+        const vendedor = normalizarTextoBusca(ficha.vendedor);
 
         if (!cliente.includes(searchTerm) &&
           !numeroVenda.includes(searchTerm) &&
@@ -935,6 +935,14 @@
     } catch {
       return dataStr;
     }
+  }
+
+  function normalizarTextoBusca(valor) {
+    return String(valor || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   function capitalizeFirstLetter(value) {

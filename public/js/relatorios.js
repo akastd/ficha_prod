@@ -9,6 +9,29 @@
   let dadosVendedores = [];
   let dadosMateriais = [];
   let catalogoTamanhos = null;
+  let catalogoRotulosTamanhos = null;
+  // Regras de equivalencia de tamanhos (canônico -> variações equivalentes).
+  // Exemplo: EG (54) absorve XGG (54) e aparece apenas como EG (54) no relatório.
+  const REGRAS_EQUIVALENCIA_TAMANHOS = Object.freeze([
+    { canonico: 'BABY PP', equivalentes: ['BL PP'] },
+    { canonico: 'BABY P', equivalentes: ['BL P'] },
+    { canonico: 'BABY M', equivalentes: ['BL M'] },
+    { canonico: 'BABY G', equivalentes: ['BL G'] },
+    { canonico: 'BABY GG', equivalentes: ['BL GG'] },
+    { canonico: 'BABY XG', equivalentes: ['BL XG', 'BABY XG (52)'] },
+    { canonico: 'BABY EG', equivalentes: ['BL EG', 'BABY XGG (54)'] },
+    { canonico: 'BABY EGG', equivalentes: ['BL EGG', 'BABY XXGG (56)'] },
+    { canonico: 'BABY EEGG', equivalentes: ['BL EEGG', 'BABY XXXGG (58)'] },
+    { canonico: 'XG (52)', equivalentes: ['XG', '52', 'G1'] },
+    { canonico: 'EG (54)', equivalentes: ['XGG (54)', 'EG', '54', 'G2'] },
+    { canonico: 'EGG (56)', equivalentes: ['XXGG (56)', 'XXGG', 'EGG', '56', 'G3'] },
+    { canonico: 'EEGG (58)', equivalentes: ['XXXGG (58)', '58', 'G4'] },
+    { canonico: 'ESP1 (60)', equivalentes: ['60', 'G5'] },
+    { canonico: 'ESP2 (62)', equivalentes: ['62', 'G6'] },
+    { canonico: 'ESP3 (64)', equivalentes: ['64', 'G7'] }
+  ]);
+  const MAPA_EQUIVALENCIA_TAMANHOS = criarMapaEquivalenciaTamanhos(REGRAS_EQUIVALENCIA_TAMANHOS);
+  const ROTULOS_TAMANHO_CANONICO = criarMapaRotulosCanonicos(REGRAS_EQUIVALENCIA_TAMANHOS);
 
   document.addEventListener('DOMContentLoaded', async () => {
     await initRelatorios();
@@ -92,14 +115,107 @@
 
       const catalogo = await response.json();
       const lista = Array.isArray(catalogo?.tamanhos) ? catalogo.tamanhos : [];
-      catalogoTamanhos = new Set(lista.map(t => normalizarTamanho(t)));
+      const tamanhosPermitidos = new Set();
+      const rotulosPorChaveCanonica = new Map();
+      const rotulosCatalogoNormalizados = new Map();
+
+      lista.forEach(tamanho => {
+        const rotuloOriginal = String(tamanho || '').trim();
+        const tamanhoNormalizado = normalizarTamanho(tamanho);
+        const chaveCanonica = obterChaveTamanhoCanonica(tamanho);
+        if (!chaveCanonica) return;
+
+        tamanhosPermitidos.add(chaveCanonica);
+        if (!rotulosPorChaveCanonica.has(chaveCanonica)) {
+          rotulosPorChaveCanonica.set(chaveCanonica, rotuloOriginal);
+        }
+        if (tamanhoNormalizado && !rotulosCatalogoNormalizados.has(tamanhoNormalizado)) {
+          rotulosCatalogoNormalizados.set(tamanhoNormalizado, rotuloOriginal);
+        }
+      });
+
+      // Se o nome canônico também existir no catálogo, ele vira o rótulo preferencial.
+      ROTULOS_TAMANHO_CANONICO.forEach((_, chaveCanonica) => {
+        if (rotulosCatalogoNormalizados.has(chaveCanonica)) {
+          rotulosPorChaveCanonica.set(chaveCanonica, rotulosCatalogoNormalizados.get(chaveCanonica));
+        }
+      });
+
+      catalogoTamanhos = tamanhosPermitidos;
+      catalogoRotulosTamanhos = rotulosPorChaveCanonica;
     } catch (error) {
       catalogoTamanhos = null;
+      catalogoRotulosTamanhos = null;
     }
   }
 
   function normalizarTamanho(valor) {
     return String(valor || '').trim().toUpperCase();
+  }
+
+  function criarMapaEquivalenciaTamanhos(regras) {
+    const mapa = new Map();
+    (Array.isArray(regras) ? regras : []).forEach(regra => {
+      const canonico = normalizarTamanho(regra?.canonico);
+      if (!canonico) return;
+
+      mapa.set(canonico, canonico);
+      (Array.isArray(regra?.equivalentes) ? regra.equivalentes : []).forEach(eq => {
+        const equivalente = normalizarTamanho(eq);
+        if (equivalente) mapa.set(equivalente, canonico);
+      });
+    });
+    return mapa;
+  }
+
+  function criarMapaRotulosCanonicos(regras) {
+    const mapa = new Map();
+    (Array.isArray(regras) ? regras : []).forEach(regra => {
+      const canonicoNormalizado = normalizarTamanho(regra?.canonico);
+      const canonicoRotulo = String(regra?.canonico || '').trim();
+      if (canonicoNormalizado && canonicoRotulo) {
+        mapa.set(canonicoNormalizado, canonicoRotulo);
+      }
+    });
+    return mapa;
+  }
+
+  function obterChaveTamanhoCanonica(tamanho) {
+    const tamanhoNormalizado = normalizarTamanho(tamanho);
+    if (!tamanhoNormalizado) return '';
+    return MAPA_EQUIVALENCIA_TAMANHOS.get(tamanhoNormalizado) || tamanhoNormalizado;
+  }
+
+  function obterRotuloTamanhoCanonico(tamanho) {
+    const chaveCanonica = obterChaveTamanhoCanonica(tamanho);
+    if (!chaveCanonica) return '';
+
+    if (catalogoRotulosTamanhos && catalogoRotulosTamanhos.has(chaveCanonica)) {
+      return catalogoRotulosTamanhos.get(chaveCanonica);
+    }
+
+    return ROTULOS_TAMANHO_CANONICO.get(chaveCanonica) || chaveCanonica;
+  }
+
+  function consolidarTamanhosEquivalentes(listaTamanhos) {
+    const agrupados = new Map();
+
+    (Array.isArray(listaTamanhos) ? listaTamanhos : []).forEach(item => {
+      const chaveCanonica = obterChaveTamanhoCanonica(item?.tamanho);
+      if (!chaveCanonica) return;
+
+      const quantidade = Number(item?.quantidade) || 0;
+      if (!agrupados.has(chaveCanonica)) {
+        agrupados.set(chaveCanonica, {
+          tamanho: obterRotuloTamanhoCanonico(item?.tamanho),
+          quantidade: 0
+        });
+      }
+
+      agrupados.get(chaveCanonica).quantidade += quantidade;
+    });
+
+    return Array.from(agrupados.values());
   }
 
   async function carregarRelatorio() {
@@ -466,10 +582,10 @@
 
       const tamanhos = await response.json();
 
-      const tamanhosFiltrados = (Array.isArray(tamanhos) ? tamanhos : [])
+      const tamanhosFiltrados = consolidarTamanhosEquivalentes(tamanhos)
         .filter(t => {
           if (!catalogoTamanhos || catalogoTamanhos.size === 0) return true;
-          return catalogoTamanhos.has(normalizarTamanho(t?.tamanho));
+          return catalogoTamanhos.has(obterChaveTamanhoCanonica(t?.tamanho));
         })
         .sort((a, b) => (b?.quantidade || 0) - (a?.quantidade || 0));
 

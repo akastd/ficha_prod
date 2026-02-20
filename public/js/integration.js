@@ -140,106 +140,139 @@
   }
 
   function configurarBotoesAcao() {
-    const container = document.getElementById('acoesContainer');
-    if (!container) return;
+    const containerPrincipal = document.getElementById('acoesContainer');
+    const containerTopo = document.getElementById('acoesContainerTopo');
+    const containers = [containerPrincipal, containerTopo].filter(Boolean);
+    if (containers.length === 0) return;
 
-    container.innerHTML = '';
+    containers.forEach(container => {
+      container.innerHTML = '';
+    });
+
+    const acaoImprimir = () => {
+      if (typeof gerarVersaoImpressao === 'function') {
+        gerarVersaoImpressao();
+      } else {
+        window.print();
+      }
+    };
+
+    const botoes = [];
 
     if (modoVisualizacao) {
-      const btnImprimir = criarBotao('btnImprimir', 'btn-primary', 'fa-print', 'Imprimir', () => {
-        if (typeof gerarVersaoImpressao === 'function') {
-          gerarVersaoImpressao();
-        } else {
-          window.print();
+      botoes.push({ id: 'btnImprimir', classe: 'btn-primary', icone: 'fa-print', texto: 'Imprimir', onClick: acaoImprimir });
+      botoes.push({ id: 'btnDuplicar', classe: 'btn-success', icone: 'fa-copy', texto: 'Duplicar Ficha', onClick: duplicarFicha });
+      botoes.push({
+        id: 'btnEditar',
+        classe: 'btn-warning',
+        icone: 'fa-edit',
+        texto: 'Editar',
+        onClick: () => {
+          window.location.href = `index.html?editar=${fichaAtualId}`;
         }
       });
-
-      const btnDuplicar = criarBotao('btnDuplicar', 'btn-success', 'fa-copy', 'Duplicar Ficha', duplicarFicha);
-
-      const btnEditar = criarBotao('btnEditar', 'btn-warning', 'fa-edit', 'Editar', () => {
-        window.location.href = `index.html?editar=${fichaAtualId}`;
+      botoes.push({
+        id: 'btnDashboard',
+        classe: 'btn-secondary',
+        icone: 'fa-chart-line',
+        texto: 'Painel de Controle',
+        onClick: () => {
+          window.location.href = 'dashboard.html';
+        },
+        alinharDireita: true
       });
-
-      const btnDashboard = criarBotao('btnDashboard', 'btn-secondary', 'fa-chart-line', 'Dashboard', () => {
-        window.location.href = 'dashboard.html';
-      });
-      btnDashboard.style.marginLeft = 'auto';
-
-      container.appendChild(btnImprimir);
-      container.appendChild(btnDuplicar);
-      container.appendChild(btnEditar);
-      container.appendChild(btnDashboard);
-
     } else if (fichaAtualId) {
-      const btnAtualizar = criarBotao('btnSalvarDB', 'btn-success', 'fa-save', `Atualizar Ficha #${fichaAtualId}`, salvarNoBanco);
-
-      const btnImprimir = criarBotao('btnImprimir', 'btn-warning', 'fa-print', 'Imprimir', () => {
-        if (typeof gerarVersaoImpressao === 'function') {
-          gerarVersaoImpressao();
-        } else {
-          window.print();
+      botoes.push({
+        id: 'btnSalvarDB',
+        classe: 'btn-success',
+        icone: 'fa-save',
+        texto: `Atualizar Ficha #${fichaAtualId}`,
+        onClick: salvarNoBanco
+      });
+      botoes.push({ id: 'btnImprimir', classe: 'btn-warning', icone: 'fa-print', texto: 'Imprimir', onClick: acaoImprimir });
+      botoes.push({
+        id: 'btnBaixar',
+        classe: 'btn-secondary',
+        icone: 'fa-download',
+        texto: 'Baixar Ficha',
+        onClick: () => {
+          if (typeof salvarFicha === 'function') salvarFicha();
         }
       });
-
-      const btnBaixar = criarBotao('btnBaixar', 'btn-secondary', 'fa-download', 'Baixar JSON', () => {
-        if (typeof salvarFicha === 'function') salvarFicha();
+      botoes.push({
+        id: 'btnCarregar',
+        classe: 'btn-secondary',
+        icone: 'fa-upload',
+        texto: 'Carregar Ficha',
+        onClick: () => {
+          if (typeof carregarFichaDeArquivo === 'function') carregarFichaDeArquivo();
+        }
       });
-
-      const btnCarregar = criarBotao('btnCarregar', 'btn-secondary', 'fa-folder-open', 'Carregar JSON', () => {
-        if (typeof carregarFichaDeArquivo === 'function') carregarFichaDeArquivo();
+      botoes.push({
+        id: 'btnDashboard',
+        classe: 'btn-primary',
+        icone: 'fa-chart-line',
+        texto: 'Painel de Controle',
+        onClick: () => {
+          window.location.href = 'dashboard.html';
+        },
+        alinharDireita: true
       });
-
-      const btnNovaFicha = criarBotao('btnNovaFicha', 'btn-success', 'fa-plus', 'Nova Ficha', () => {
-        window.location.href = 'index.html';
+      botoes.push({
+        id: 'btnNovaFicha',
+        classe: 'btn-success',
+        icone: 'fa-plus',
+        texto: 'Nova Ficha',
+        onClick: () => {
+          window.location.href = 'index.html';
+        }
       });
-
-      const btnDashboard = criarBotao('btnDashboard', 'btn-primary', 'fa-chart-line', 'Dashboard', () => {
-        window.location.href = 'dashboard.html';
-      });
-      btnDashboard.style.marginLeft = 'auto';
-
-      container.appendChild(btnAtualizar);
-      container.appendChild(btnImprimir);
-      container.appendChild(btnBaixar);
-      container.appendChild(btnCarregar);
-      container.appendChild(btnDashboard);
-      container.appendChild(btnNovaFicha);
-
     } else {
-      const btnSalvar = criarBotao('btnSalvarDB', 'btn-success', 'fa-save', 'Salvar Ficha', salvarNoBanco);
-
-      const btnImprimir = criarBotao('btnImprimir', 'btn-warning', 'fa-print', 'Imprimir', () => {
-        if (typeof gerarVersaoImpressao === 'function') {
-          gerarVersaoImpressao();
-        } else {
-          window.print();
+      botoes.push({ id: 'btnSalvarDB', classe: 'btn-success', icone: 'fa-save', texto: 'Salvar Ficha', onClick: salvarNoBanco });
+      botoes.push({ id: 'btnImprimir', classe: 'btn-warning', icone: 'fa-print', texto: 'Imprimir', onClick: acaoImprimir });
+      botoes.push({
+        id: 'btnBaixar',
+        classe: 'btn-secondary',
+        icone: 'fa-download',
+        texto: 'Baixar Ficha',
+        onClick: () => {
+          if (typeof salvarFicha === 'function') salvarFicha();
         }
       });
-
-      const btnBaixar = criarBotao('btnBaixar', 'btn-secondary', 'fa-download', 'Baixar JSON', () => {
-        if (typeof salvarFicha === 'function') salvarFicha();
+      botoes.push({
+        id: 'btnCarregar',
+        classe: 'btn-secondary',
+        icone: 'fa-upload',
+        texto: 'Carregar Ficha',
+        onClick: () => {
+          if (typeof carregarFichaDeArquivo === 'function') carregarFichaDeArquivo();
+        }
       });
-
-      const btnCarregar = criarBotao('btnCarregar', 'btn-secondary', 'fa-folder-open', 'Carregar JSON', () => {
-        if (typeof carregarFichaDeArquivo === 'function') carregarFichaDeArquivo();
+      botoes.push({
+        id: 'btnDashboard',
+        classe: 'btn-primary',
+        icone: 'fa-chart-line',
+        texto: 'Painel de Controle',
+        onClick: () => {
+          window.location.href = 'dashboard.html';
+        },
+        alinharDireita: true
       });
-
-      const btnDashboard = criarBotao('btnDashboard', 'btn-primary', 'fa-chart-line', 'Dashboard', () => {
-        window.location.href = 'dashboard.html';
-      });
-      btnDashboard.style.marginLeft = 'auto';
-
-      container.appendChild(btnSalvar);
-      container.appendChild(btnImprimir);
-      container.appendChild(btnBaixar);
-      container.appendChild(btnCarregar);
-      container.appendChild(btnDashboard);
     }
+
+    containers.forEach(container => {
+      const usarIds = container === containerPrincipal;
+      botoes.forEach(botaoDef => {
+        const btn = criarBotao(usarIds ? botaoDef.id : '', botaoDef.classe, botaoDef.icone, botaoDef.texto, botaoDef.onClick);
+        if (botaoDef.alinharDireita) btn.style.marginLeft = 'auto';
+        container.appendChild(btn);
+      });
+    });
   }
 
   function criarBotao(id, classe, icone, texto, onClick) {
     const btn = document.createElement('button');
-    btn.id = id;
+    if (id) btn.id = id;
     btn.type = 'button';
     btn.className = `btn ${classe}`;
     btn.innerHTML = `<i class="fas ${icone}"></i><span>${texto}</span>`;
