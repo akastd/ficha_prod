@@ -186,6 +186,14 @@ body.page-index .header-actions .btn-secondary:hover {
   color: #374151;
 }
 
+.com-nomes-group {
+  margin-bottom: 6px;
+}
+
+.com-nomes-group .form-control {
+  min-height: 38px;
+}
+
 .form-control {
   width: 100%;
   border-radius: 10px;
@@ -200,6 +208,11 @@ body.page-index .header-actions .btn-secondary:hover {
   outline: none;
   border-color: var(--secondary);
   background: #ffffff;
+}
+
+#composicao.form-control {
+  min-height: 38px;
+  line-height: 1.2;
 }
 
 textarea.form-control {
@@ -657,6 +670,10 @@ textarea.form-control {
 
   .icon-item {
     width: 45%;
+  }
+
+  .com-nomes-group {
+    margin-bottom: 6px;
   }
 }
 

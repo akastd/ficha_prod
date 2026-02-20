@@ -78,6 +78,12 @@ class APIClient {
 
     const method = dados.id ? 'PUT' : 'POST';
 
+    const comNomesNumero = (() => {
+      if (dados.comNomes === true) return 1;
+      const numero = Number.parseInt(String(dados.comNomes ?? '').trim(), 10);
+      return Number.isInteger(numero) && numero >= 1 && numero <= 3 ? numero : 0;
+    })();
+
     const dadosEnvio = {
       cliente: dados.cliente || '',
       vendedor: dados.vendedor || '',
@@ -115,6 +121,7 @@ class APIClient {
       faixaLocal: dados.faixaLocal || '',
       faixaCor: dados.faixaCor || '',
       arte: dados.arte || '',
+      comNomes: comNomesNumero,
       observacoes: dados.observacoes || '',
       imagemData: dados.imagemData || '',
       imagensData: dados.imagensData || '[]'

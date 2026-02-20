@@ -25,6 +25,8 @@
   const PREVIEW_READY_MESSAGE = 'ficha-preview-ready';
   let paginaAtual = 1;
   const itensPorPagina = 10;
+  let carregamentoEstatisticasAtivo = 0;
+  const IDS_ESTATISTICAS = ['statTotalFichas', 'statPendentes', 'statClientes', 'statEsteMes'];
 
   document.addEventListener('DOMContentLoaded', async () => {
     await initDashboard();
@@ -198,6 +200,7 @@
   // Fichas
 
   async function carregarFichas() {
+    renderizarLoadingFichas();
     try {
       fichasCache = await db.listarFichas();
       fichasFiltradas = [...fichasCache];
@@ -206,7 +209,48 @@
     } catch (error) {
       console.error('Erro ao carregar fichas:', error);
       mostrarErro('Erro ao carregar fichas');
+      const container = document.getElementById('fichasContainer');
+      if (container) container.innerHTML = '';
     }
+  }
+
+  function renderizarLoadingFichas() {
+    const container = document.getElementById('fichasContainer');
+    const emptyState = document.getElementById('emptyState');
+    const resultadosCount = document.getElementById('resultadosCount');
+    const pagination = document.getElementById('pagination');
+    if (!container) return;
+
+    if (emptyState) emptyState.style.display = 'none';
+    if (pagination) pagination.style.display = 'none';
+    if (resultadosCount) resultadosCount.textContent = 'Carregando...';
+
+    const quantidade = Math.max(3, Math.min(itensPorPagina, 5));
+    container.innerHTML = Array.from({ length: quantidade }, () => criarCardFichaSkeleton()).join('');
+  }
+
+  function criarCardFichaSkeleton() {
+    return `
+      <div class="ficha-item ficha-item-skeleton" aria-hidden="true">
+        <div class="ficha-thumb ficha-thumb-skeleton"></div>
+        <div class="ficha-main">
+          <div class="ficha-header">
+            <span class="dashboard-skeleton-line dashboard-skeleton-title"></span>
+            <span class="dashboard-skeleton-pill"></span>
+          </div>
+          <div class="ficha-details ficha-details-skeleton">
+            <div class="dashboard-skeleton-line dashboard-skeleton-short"></div>
+            <div class="dashboard-skeleton-line dashboard-skeleton-medium"></div>
+            <div class="dashboard-skeleton-line dashboard-skeleton-short"></div>
+          </div>
+        </div>
+        <div class="ficha-actions ficha-actions-skeleton">
+          <span class="dashboard-skeleton-btn"></span>
+          <span class="dashboard-skeleton-btn"></span>
+          <span class="dashboard-skeleton-btn"></span>
+        </div>
+      </div>
+    `;
   }
 
   function renderizarFichas(fichas) {
@@ -454,7 +498,29 @@
 
   // Estatísticas
 
+  function aplicarLoadingEstatisticas(ativo) {
+    IDS_ESTATISTICAS.forEach(id => {
+      const elemento = document.getElementById(id);
+      if (!elemento) return;
+      elemento.classList.toggle('stat-value-skeleton', ativo);
+      elemento.setAttribute('aria-busy', ativo ? 'true' : 'false');
+    });
+  }
+
+  function iniciarLoadingEstatisticas() {
+    carregamentoEstatisticasAtivo += 1;
+    aplicarLoadingEstatisticas(true);
+  }
+
+  function finalizarLoadingEstatisticas() {
+    carregamentoEstatisticasAtivo = Math.max(0, carregamentoEstatisticasAtivo - 1);
+    if (carregamentoEstatisticasAtivo === 0) {
+      aplicarLoadingEstatisticas(false);
+    }
+  }
+
   async function atualizarEstatisticas() {
+    iniciarLoadingEstatisticas();
     try {
       const stats = await db.buscarEstatisticas();
 
@@ -469,6 +535,8 @@
       if (statEsteMes) statEsteMes.textContent = stats.esteMes || 0;
     } catch (error) {
       console.error('Erro ao atualizar estatísticas:', error);
+    } finally {
+      finalizarLoadingEstatisticas();
     }
   }
 

@@ -164,6 +164,68 @@
       .join(' ');
   }
 
+  const COM_NOMES_VALOR_NENHUM = '0';
+  const COM_NOMES_MARCADORES = Object.freeze({
+    '1': 'COM NOMES',
+    '2': 'COM NOMES E NÚMEROS',
+    '3': 'SOMENTE NÚMEROS'
+  });
+
+  function normalizarComNomesValor(valor) {
+    if (valor === true) return '1';
+    if (valor === false || valor === null || valor === undefined) return COM_NOMES_VALOR_NENHUM;
+
+    const numero = Number.parseInt(String(valor).trim(), 10);
+    if (Number.isInteger(numero) && numero >= 1 && numero <= 3) return String(numero);
+
+    const texto = String(valor).trim();
+    if (!texto) return COM_NOMES_VALOR_NENHUM;
+
+    if (/somente n[úu]meros/i.test(texto)) return '3';
+    if (/com nomes e n[úu]meros/i.test(texto)) return '2';
+    if (/com nomes/i.test(texto) || /^true$/i.test(texto)) return '1';
+
+    return COM_NOMES_VALOR_NENHUM;
+  }
+
+  function marcadorComNomesPorValor(valor) {
+    const chave = normalizarComNomesValor(valor);
+    return COM_NOMES_MARCADORES[chave] || '';
+  }
+
+  function detectarComNomesPorTexto(texto) {
+    const valorTexto = String(texto || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!valorTexto) return COM_NOMES_VALOR_NENHUM;
+
+    if (/(?:^|\/\s*)SOMENTE N[ÚU]MEROS\s*$/i.test(valorTexto)) return '3';
+    if (/(?:^|\/\s*)COM NOMES E N[ÚU]MEROS\s*$/i.test(valorTexto)) return '2';
+    if (/(?:^|\/\s*)COM NOMES\s*$/i.test(valorTexto)) return '1';
+
+    return COM_NOMES_VALOR_NENHUM;
+  }
+
+  function removerMarcadorComNomes(texto) {
+    const semSomenteNumerosComBarra = String(texto || '').replace(/\s*\/\s*SOMENTE N[ÚU]MEROS\s*$/i, '');
+    const semComNomesENumerosComBarra = semSomenteNumerosComBarra.replace(/\s*\/\s*COM NOMES E N[ÚU]MEROS\s*$/i, '');
+    const semComNomesComBarra = semComNomesENumerosComBarra.replace(/\s*\/\s*COM NOMES\s*$/i, '');
+    const semSomenteNumeros = semComNomesComBarra.replace(/\s*SOMENTE N[ÚU]MEROS\s*$/i, '');
+    const semComNomesENumeros = semSomenteNumeros.replace(/\s*COM NOMES E N[ÚU]MEROS\s*$/i, '');
+    const semComNomes = semComNomesENumeros.replace(/\s*COM NOMES\s*$/i, '');
+    return semComNomes.replace(/[\/\s]+$/, '').trim();
+  }
+
+  function aplicarMarcadorComNomes(texto, valorComNomes) {
+    const base = removerMarcadorComNomes(texto);
+    const marcador = marcadorComNomesPorValor(valorComNomes);
+    if (!marcador) return base;
+    if (!base) return marcador;
+    return `${base} / ${marcador}`;
+  }
+
   function initCatalogInUI() {
     preencherProdutosList();
     preencherMangasSelect();
@@ -1374,6 +1436,7 @@
       faixaLocal,
       faixaCor,
       arte: arteVal,
+      comNomes: Number(normalizarComNomesValor(document.getElementById('comNomes')?.value || '0')),
       composicao: document.getElementById('composicao')?.value || '',
       observacoes: document.getElementById('observacoes')?.value || '',
       imagens: window.getImagens ? window.getImagens() : [],
@@ -1496,6 +1559,12 @@
     setVal('arte', ficha.arte);
     setVal('composicao', ficha.composicao);
     setVal('observacoes', ficha.observacoes);
+    const comNomesSelect = document.getElementById('comNomes');
+    if (comNomesSelect) {
+      const valorSalvo = normalizarComNomesValor(ficha.comNomes ?? ficha.com_nomes);
+      const valorPorTexto = detectarComNomesPorTexto(ficha.observacoes || '');
+      comNomesSelect.value = valorSalvo !== COM_NOMES_VALOR_NENHUM ? valorSalvo : valorPorTexto;
+    }
 
     document.getElementById('arte')?.dispatchEvent(new Event('change'));
     document.getElementById('material')?.dispatchEvent(new Event('input'));
@@ -1912,6 +1981,10 @@
     const arteText = getSelectText('arte');
     setText('print-arte', arteText, '-');
 
+    const comNomesVal = normalizarComNomesValor(getInputValue('comNomes'));
+    const comNomesText = marcadorComNomesPorValor(comNomesVal);
+    setText('print-comNomes', capitalizeFirstLetter(comNomesText), '-');
+
     const composicaoVal = getInputValue('composicao');
     setText('print-composicao', composicaoVal, '-');
 
@@ -2292,6 +2365,12 @@
         }
       }
 
+      const valorComNomes = normalizarComNomesValor(getRaw('comNomes'));
+      const marcadorComNomes = marcadorComNomesPorValor(valorComNomes);
+      if (marcadorComNomes) {
+        partes.push(marcadorComNomes);
+      }
+
       const textoFinal = partes.length > 0
         ? partes.join(' / ').toUpperCase()
         : '';
@@ -2343,6 +2422,43 @@
         const confirmou = await abrirModalConfirmacaoAutopreencher();
         if (!confirmou) return;
         atualizarObservacoes(true);
+      });
+    }
+
+    const comNomesSelect = document.getElementById('comNomes');
+    if (comNomesSelect) {
+      const valorAtualSelect = normalizarComNomesValor(comNomesSelect.value);
+      const valorDetectadoPorTexto = detectarComNomesPorTexto(getEstadoObservacoesAtual().texto);
+      comNomesSelect.value = valorAtualSelect !== COM_NOMES_VALOR_NENHUM
+        ? valorAtualSelect
+        : valorDetectadoPorTexto;
+
+      comNomesSelect.addEventListener('change', () => {
+        const observacoesInput = document.getElementById('observacoes');
+        if (!observacoesInput) return;
+
+        const estadoAtual = getEstadoObservacoesAtual();
+        const textoAtual = estadoAtual.texto || '';
+        const textoFinal = aplicarMarcadorComNomes(textoAtual, comNomesSelect.value);
+
+        if (normalizarTextoComparacao(textoFinal) === normalizarTextoComparacao(textoAtual)) return;
+
+        aplicandoAutoPreenchimento = true;
+        try {
+          observacoesInput.value = textoFinal;
+          if (window.richTextEditor) {
+            if (typeof window.richTextEditor.setContentWithSafeUndo === 'function') {
+              window.richTextEditor.setContentWithSafeUndo(textoFinal);
+            } else {
+              window.richTextEditor.setContent(textoFinal);
+            }
+          }
+          if (!bloqueioAutoPreenchimento) {
+            ultimoTextoAuto = textoFinal;
+          }
+        } finally {
+          aplicandoAutoPreenchimento = false;
+        }
       });
     }
 

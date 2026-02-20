@@ -68,7 +68,24 @@ function normalizeProdutos(produtos) {
   });
 }
 
+function normalizeComNomesValue(value) {
+  if (value === true) return 1;
+  if (value === false || value === null || value === undefined) return 0;
+
+  const numero = Number.parseInt(String(value).trim(), 10);
+  if (Number.isInteger(numero) && numero >= 1 && numero <= 3) return numero;
+
+  const texto = String(value).trim();
+  if (!texto) return 0;
+  if (/somente n[úu]meros/i.test(texto)) return 3;
+  if (/com nomes e n[úu]meros/i.test(texto)) return 2;
+  if (/com nomes/i.test(texto) || /^true$/i.test(texto)) return 1;
+
+  return 0;
+}
+
 function normalizeFichaPayload(dados) {
+  const comNomesRaw = dados?.comNomes ?? dados?.com_nomes;
   return {
     ...dados,
     cliente: normalizeNameCase(dados?.cliente || ''),
@@ -76,7 +93,8 @@ function normalizeFichaPayload(dados) {
     corPeDeGolaInterno: normalizeNameCase(dados?.corPeDeGolaInterno || ''),
     corPeDeGolaExterno: normalizeNameCase(dados?.corPeDeGolaExterno || ''),
     corBotao: normalizeNameCase(dados?.corBotao || ''),
-    produtos: normalizeProdutos(dados?.produtos)
+    produtos: normalizeProdutos(dados?.produtos),
+    comNomes: normalizeComNomesValue(comNomesRaw)
   };
 }
 
@@ -178,6 +196,7 @@ async function initDatabase() {
         faixa_local TEXT,
         faixa_cor TEXT,
         arte TEXT,
+        com_nomes INTEGER DEFAULT 0,
         observacoes TEXT,
         imagem_data TEXT,
         imagens_data TEXT,
@@ -221,6 +240,7 @@ async function initDatabase() {
       'filete_cor TEXT',
       'faixa_local TEXT',
       'faixa_cor TEXT',
+      'com_nomes INTEGER DEFAULT 0',
       "kanban_status TEXT DEFAULT 'pendente'",
       'kanban_status_updated_at DATETIME',
       'kanban_ordem INTEGER'
@@ -233,6 +253,21 @@ async function initDatabase() {
       } catch (e) {
         // Coluna já existe, ignorar
       }
+    }
+
+    try {
+      await db.execute(`
+        UPDATE fichas
+        SET com_nomes = CASE
+          WHEN observacoes IS NOT NULL AND (UPPER(observacoes) LIKE '%SOMENTE NÚMEROS%' OR UPPER(observacoes) LIKE '%SOMENTE NUMEROS%') THEN 3
+          WHEN observacoes IS NOT NULL AND (UPPER(observacoes) LIKE '%COM NOMES E NÚMEROS%' OR UPPER(observacoes) LIKE '%COM NOMES E NUMEROS%') THEN 2
+          WHEN observacoes IS NOT NULL AND UPPER(observacoes) LIKE '%COM NOMES%' THEN 1
+          ELSE 0
+        END
+        WHERE com_nomes IS NULL
+      `);
+    } catch (e) {
+      // Ignora se a coluna não existir por qualquer motivo.
     }
 
     try {
@@ -453,8 +488,8 @@ app.post('/api/fichas', async (req, res) => {
         gola, cor_gola, acabamento_gola, largura_gola, cor_peitilho_interno, cor_peitilho_externo, cor_pe_de_gola_interno, cor_pe_de_gola_externo, cor_botao,
         abertura_lateral, cor_abertura_lateral, reforco_gola, cor_reforco, bolso,
         filete, filete_local, filete_cor, faixa, faixa_local, faixa_cor,
-        arte, observacoes, imagem_data, imagens_data, produtos, data_criacao, data_atualizacao
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        arte, com_nomes, observacoes, imagem_data, imagens_data, produtos, data_criacao, data_atualizacao
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const params = [
@@ -467,7 +502,7 @@ app.post('/api/fichas', async (req, res) => {
       dados.aberturaLateral, dados.corAberturaLateral, dados.reforcoGola, dados.corReforco, dados.bolso,
       dados.filete, dados.fileteLocal, dados.fileteCor,
       dados.faixa, dados.faixaLocal, dados.faixaCor,
-      dados.arte, dados.observacoes, dados.imagemData, dados.imagensData,
+      dados.arte, dados.comNomes, dados.observacoes, dados.imagemData, dados.imagensData,
       produtosJson, now, now
     ];
 
@@ -517,7 +552,7 @@ app.put('/api/fichas/:id', async (req, res) => {
         abertura_lateral = ?, cor_abertura_lateral = ?, reforco_gola = ?, cor_reforco = ?, bolso = ?,
         filete = ?, filete_local = ?, filete_cor = ?,
         faixa = ?, faixa_local = ?, faixa_cor = ?,
-        arte = ?, observacoes = ?, imagem_data = ?, imagens_data = ?,
+        arte = ?, com_nomes = ?, observacoes = ?, imagem_data = ?, imagens_data = ?,
         produtos = ?, data_atualizacao = ?
       WHERE id = ?
     `;
@@ -532,7 +567,7 @@ app.put('/api/fichas/:id', async (req, res) => {
       dados.aberturaLateral, dados.corAberturaLateral, dados.reforcoGola, dados.corReforco, dados.bolso,
       dados.filete, dados.fileteLocal, dados.fileteCor,
       dados.faixa, dados.faixaLocal, dados.faixaCor,
-      dados.arte, dados.observacoes, dados.imagemData, dados.imagensData,
+      dados.arte, dados.comNomes, dados.observacoes, dados.imagemData, dados.imagensData,
       produtosJson, now, req.params.id
     ];
 

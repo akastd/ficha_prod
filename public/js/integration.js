@@ -52,11 +52,46 @@
     'faixa_local': 'faixaLocal',
     'faixa_cor': 'faixaCor',
     'arte': 'arte',
+    'com_nomes': 'comNomes',
     'observacoes': 'observacoes',
     'imagens_data': 'imagensData',
     'imagem_data': 'imagemData',
     'produtos': 'produtos'
   };
+
+  const COM_NOMES_VALOR_NENHUM = '0';
+
+  function normalizarComNomesValor(valor) {
+    if (valor === true) return '1';
+    if (valor === false || valor === null || valor === undefined) return COM_NOMES_VALOR_NENHUM;
+
+    const numero = Number.parseInt(String(valor).trim(), 10);
+    if (Number.isInteger(numero) && numero >= 1 && numero <= 3) return String(numero);
+
+    const texto = String(valor).trim();
+    if (!texto) return COM_NOMES_VALOR_NENHUM;
+
+    if (/somente n[úu]meros/i.test(texto)) return '3';
+    if (/com nomes e n[úu]meros/i.test(texto)) return '2';
+    if (/com nomes/i.test(texto) || /^true$/i.test(texto)) return '1';
+
+    return COM_NOMES_VALOR_NENHUM;
+  }
+
+  function detectarComNomesPorTexto(texto) {
+    const valorTexto = String(texto || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!valorTexto) return COM_NOMES_VALOR_NENHUM;
+
+    if (/(?:^|\/\s*)SOMENTE N[ÚU]MEROS\s*$/i.test(valorTexto)) return '3';
+    if (/(?:^|\/\s*)COM NOMES E N[ÚU]MEROS\s*$/i.test(valorTexto)) return '2';
+    if (/(?:^|\/\s*)COM NOMES\s*$/i.test(valorTexto)) return '1';
+
+    return COM_NOMES_VALOR_NENHUM;
+  }
 
   function converterBancoParaForm(fichaBanco) {
     const fichaForm = {};
@@ -403,6 +438,7 @@
       faixaLocal: document.getElementById('faixaLocal')?.value || '',
       faixaCor: document.getElementById('faixaCor')?.value || '',
       arte: document.getElementById('arte')?.value || '',
+      comNomes: Number(normalizarComNomesValor(document.getElementById('comNomes')?.value || '0')),
       observacoes: document.getElementById('observacoes')?.value || '',
       imagensData: JSON.stringify(imagensData),
       imagemData: imagensData.length > 0 ? imagensData[0].src : ''
@@ -709,6 +745,13 @@
 
     if (window.richTextEditor) {
       window.richTextEditor.setContent(observacoesSalvas);
+    }
+
+    const selectComNomes = document.getElementById('comNomes');
+    if (selectComNomes) {
+      const valorSalvo = normalizarComNomesValor(ficha.comNomes ?? ficha.com_nomes);
+      const valorPorTexto = detectarComNomesPorTexto(observacoesSalvas);
+      selectComNomes.value = valorSalvo !== COM_NOMES_VALOR_NENHUM ? valorSalvo : valorPorTexto;
     }
 
     // Mostrar campos condicionais
