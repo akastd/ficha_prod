@@ -406,6 +406,8 @@ const WEATHER_PROVIDER_DISABLE_AFTER_FAILURES = Number.isFinite(Number(process.e
 const WEATHER_PROVIDER_DISABLE_TTL_MS = Number.isFinite(Number(process.env.WEATHER_PROVIDER_DISABLE_TTL_MS))
   ? Number(process.env.WEATHER_PROVIDER_DISABLE_TTL_MS)
   : 6 * 60 * 60 * 1000;
+const GITHUB_COMMIT_TIMEZONE = String(process.env.GITHUB_COMMIT_TIMEZONE || 'Etc/GMT+4').trim() || 'Etc/GMT+4';
+const GITHUB_COMMIT_TIMEZONE_LABEL = 'GMT-4';
 const weatherSnapshotCache = new Map();
 const weatherGeoProviderStats = new Map();
 
@@ -957,7 +959,8 @@ function formatGithubDate(value) {
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: GITHUB_COMMIT_TIMEZONE
   }).format(new Date(parsed));
 }
 
@@ -1026,7 +1029,7 @@ async function getGithubCommitStatus() {
 
     return {
       status: 'ok',
-      message: date ? `Último commit em ${date}` : 'Último commit encontrado',
+      message: date ? `Último commit em ${date} (${GITHUB_COMMIT_TIMEZONE_LABEL})` : 'Último commit encontrado',
       sha: sha || null,
       url: commitUrl
     };

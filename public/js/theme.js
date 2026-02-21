@@ -83,7 +83,10 @@
 
     const hours = Math.floor(minutes / 60);
     if (hours < 24) {
-      return hours === 1 ? 'h\u00E1 1 hora' : `h\u00E1 ${hours} horas`;
+      const remainingMinutes = minutes % 60;
+      const hoursText = hours === 1 ? '1 hora' : `${hours} horas`;
+      const minutesText = remainingMinutes === 1 ? '1 minuto' : `${remainingMinutes} minutos`;
+      return `h\u00E1 ${hoursText} e ${minutesText}`;
     }
 
     const days = Math.floor(hours / 24);
@@ -341,7 +344,7 @@
       { key: 'turso', label: 'Banco Turso' },
       { key: 'cloudinary', label: 'Cloudinary' },
       { key: 'vercel', label: 'Vercel.app' },
-      { key: 'github', label: 'GitHub (\u00FAltimo commit)' }
+      { key: 'github', label: 'GitHub Status' }
     ];
 
     const rowsHtml = rows.map(row => {
@@ -384,7 +387,6 @@
 
     const text = formatGreetingLine(snapshot);
     line.textContent = text;
-    line.title = text;
   }
 
   function renderTooltip(toolbar, snapshot) {

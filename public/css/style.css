@@ -113,7 +113,7 @@ header {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: min(360px, calc(100vw - 28px));
+  width: min(520px, calc(100vw - 28px));
   background: #0f172a;
   border: 1px solid #334155;
   border-radius: 10px;
