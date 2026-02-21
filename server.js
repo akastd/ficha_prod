@@ -823,7 +823,7 @@ async function getTursoConnectionStatus() {
     await db.execute('SELECT 1');
     return {
       status: 'ok',
-      message: 'Conectado'
+      message: 'Conectado (aws-us-east-1.turso.io)'
     };
   } catch (error) {
     return {

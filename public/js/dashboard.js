@@ -23,10 +23,22 @@
   let botaoVerFichaModalImagem = null;
   let botaoVisualizarOrigemModalImagem = null;
   const PREVIEW_READY_MESSAGE = 'ficha-preview-ready';
+  const DUPLICACAO_DRAFT_STORAGE_KEY = 'ficha_duplicada_draft_v1';
   let paginaAtual = 1;
   const itensPorPagina = 10;
   let carregamentoEstatisticasAtivo = 0;
   const IDS_ESTATISTICAS = ['statTotalFichas', 'statPendentes', 'statClientes', 'statEsteMes'];
+  const PERSONALIZACAO_LABELS = Object.freeze({
+    sem_personalizacao: 'Sem Personalização',
+    sublimacao: 'Sublimação',
+    serigrafia: 'Serigrafia',
+    bordado: 'Bordado',
+    dtf: 'DTF Têxtil',
+    transfer: 'Transfer',
+    sublimacao_serigrafia: 'Sublimação e Serigrafia',
+    serigrafia_dtf: 'Serigrafia e DTF',
+    serigrafia_bordado: 'Serigrafia e Bordado'
+  });
 
   document.addEventListener('DOMContentLoaded', async () => {
     await initDashboard();
@@ -348,6 +360,7 @@
     const miniaturaSrc = obterMiniaturaFicha(ficha);
     const clienteFormatado = capitalizeFirstLetter(ficha.cliente);
     const vendedorFormatado = capitalizeFirstLetter(ficha.vendedor);
+    const personalizacaoLabel = getPersonalizacaoLabel(ficha.arte);
 
     return `
     <div class="ficha-item ${isPendente ? '' : 'ficha-entregue'}">
@@ -372,6 +385,12 @@
             <div class="ficha-detail">
               <i class="fas fa-user"></i>
               <span>${vendedorFormatado}</span>
+            </div>
+          ` : ''}
+          ${personalizacaoLabel ? `
+            <div class="ficha-detail">
+              <i class="fas fa-paint-brush"></i>
+              <span>${personalizacaoLabel}</span>
             </div>
           ` : ''}
 
@@ -824,6 +843,66 @@
     return dados;
   }
 
+  function textoSemHtml(valor) {
+    return String(valor || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function obterObservacoesPreferencial(dados) {
+    if (!dados || typeof dados !== 'object') return '';
+
+    const observacoesHtml = String(dados.observacoesHtml || dados.observacoes_html || '').trim();
+    const observacoes = String(dados.observacoes || '').trim();
+    const observacoesPlain = String(dados.observacoesPlainText || dados.observacoes_plain_text || '').trim();
+
+    return observacoesHtml || observacoes || observacoesPlain;
+  }
+
+  function normalizarObservacoesDuplicacao(payload) {
+    if (!payload || typeof payload !== 'object') return payload;
+
+    const observacoesOrigem = obterObservacoesPreferencial(payload);
+    if (!observacoesOrigem) return payload;
+
+    if (!String(payload.observacoes || '').trim()) {
+      payload.observacoes = observacoesOrigem;
+    }
+
+    if (!String(payload.observacoesHtml || '').trim()) {
+      payload.observacoesHtml = String(payload.observacoes || observacoesOrigem);
+    }
+
+    if (!String(payload.observacoesPlainText || '').trim()) {
+      payload.observacoesPlainText = textoSemHtml(payload.observacoesHtml || payload.observacoes || observacoesOrigem);
+    }
+
+    return payload;
+  }
+
+  function prepararDadosParaDuplicacao(dados) {
+    if (!dados || typeof dados !== 'object') return null;
+
+    const payload = { ...dados };
+    delete payload.id;
+    delete payload.status;
+    delete payload.dataCriacao;
+    delete payload.dataAtualizacao;
+    delete payload.data_criacao;
+    delete payload.data_atualizacao;
+
+    return normalizarObservacoesDuplicacao(payload);
+  }
+
+  function salvarRascunhoDuplicacao(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+
+    try {
+      sessionStorage.setItem(DUPLICACAO_DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function duplicarFichaModal() {
     if (duplicandoFichaModal) return;
     if (!fichaVisualizadaId || Number.isNaN(Number(fichaVisualizadaId))) {
@@ -842,19 +921,40 @@
         dadosDuplicados = win.coletarFicha();
       }
 
-      if (!dadosDuplicados) {
+      const observacoesColetadas = obterObservacoesPreferencial(dadosDuplicados);
+      if (!dadosDuplicados || !observacoesColetadas) {
         const fichaBanco = await db.buscarFicha(fichaVisualizadaId);
-        dadosDuplicados = mapearFichaBancoParaEnvio(fichaBanco);
+        const dadosBanco = mapearFichaBancoParaEnvio(fichaBanco);
+
+        if (!dadosDuplicados) {
+          dadosDuplicados = dadosBanco;
+        } else if (dadosBanco) {
+          const observacoesBancoHtml = String(dadosBanco.observacoesHtml || '').trim();
+          const observacoesBanco = String(dadosBanco.observacoes || '').trim();
+
+          if (!String(dadosDuplicados.observacoesHtml || '').trim() && observacoesBancoHtml) {
+            dadosDuplicados.observacoesHtml = dadosBanco.observacoesHtml;
+          }
+
+          if (!String(dadosDuplicados.observacoes || '').trim()) {
+            dadosDuplicados.observacoes = observacoesBanco || observacoesBancoHtml;
+          }
+        }
       }
 
       if (!dadosDuplicados) throw new Error('Dados da ficha indisponíveis');
 
-      delete dadosDuplicados.id;
-      const novoId = await db.salvarFicha(dadosDuplicados);
-      await carregarFichas();
-      aplicarFiltros();
-      await atualizarEstatisticas();
-      window.location.href = `index.html?editar=${novoId}`;
+      const payloadDuplicacao = prepararDadosParaDuplicacao(dadosDuplicados);
+      if (!payloadDuplicacao) {
+        throw new Error('Falha ao preparar dados para duplicacao');
+      }
+
+      const rascunhoSalvo = salvarRascunhoDuplicacao(payloadDuplicacao);
+      if (!rascunhoSalvo) {
+        throw new Error('Falha ao salvar rascunho da duplicacao');
+      }
+
+      window.location.href = 'index.html?duplicar=1';
     } catch (error) {
       console.error('Erro ao duplicar ficha pelo modal:', error);
       mostrarErro('Erro ao duplicar ficha');
@@ -1007,6 +1107,21 @@
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  function getPersonalizacaoLabel(value) {
+    const normalized = normalizarTextoBusca(value)
+      .replace(/[\s/-]+/g, '_')
+      .replace(/_e_/g, '_');
+
+    if (!normalized) return '';
+    if (PERSONALIZACAO_LABELS[normalized]) return PERSONALIZACAO_LABELS[normalized];
+
+    return normalized
+      .split('_')
+      .filter(Boolean)
+      .map(parte => (parte === 'dtf' ? 'DTF' : capitalizeFirstLetter(parte)))
+      .join(' ');
   }
 
   function capitalizeFirstLetter(value) {

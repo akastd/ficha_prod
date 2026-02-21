@@ -7,6 +7,8 @@
 
   let fichaAtualId = null;
   let modoVisualizacao = false;
+  let fichaVisualizacaoAtual = null;
+  const DUPLICACAO_DRAFT_STORAGE_KEY = 'ficha_duplicada_draft_v1';
   const CAMPOS_OBRIGATORIOS = Object.freeze([
     { key: 'cliente', id: 'cliente', label: 'o nome do cliente' },
     { key: 'vendedor', id: 'vendedor', label: 'o vendedor' },
@@ -54,6 +56,8 @@
     'arte': 'arte',
     'com_nomes': 'comNomes',
     'observacoes': 'observacoes',
+    'observacoes_html': 'observacoesHtml',
+    'observacoes_plain_text': 'observacoesPlainText',
     'imagens_data': 'imagensData',
     'imagem_data': 'imagemData',
     'produtos': 'produtos'
@@ -134,7 +138,9 @@
       await db.init();
       await initClienteAutocomplete();
       await verificarParametrosURL();
-      configurarBotoesAcao();
+      if (!modoVisualizacao) {
+        configurarBotoesAcao();
+      }
     } catch (error) {}
   }
 
@@ -315,20 +321,128 @@
     return btn;
   }
 
+  function textoSemHtml(valor) {
+    return String(valor || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function obterObservacoesPreferencial(dados) {
+    if (!dados || typeof dados !== 'object') return '';
+
+    const observacoesHtml = String(dados.observacoesHtml || dados.observacoes_html || '').trim();
+    const observacoes = String(dados.observacoes || '').trim();
+    const observacoesPlain = String(dados.observacoesPlainText || dados.observacoes_plain_text || '').trim();
+
+    return observacoesHtml || observacoes || observacoesPlain;
+  }
+
+  function normalizarObservacoesDuplicacao(payload) {
+    if (!payload || typeof payload !== 'object') return payload;
+
+    const observacoesOrigem = obterObservacoesPreferencial(payload);
+    if (!observacoesOrigem) return payload;
+
+    if (!String(payload.observacoes || '').trim()) {
+      payload.observacoes = observacoesOrigem;
+    }
+
+    if (!String(payload.observacoesHtml || '').trim()) {
+      payload.observacoesHtml = String(payload.observacoes || observacoesOrigem);
+    }
+
+    if (!String(payload.observacoesPlainText || '').trim()) {
+      payload.observacoesPlainText = textoSemHtml(payload.observacoesHtml || payload.observacoes || observacoesOrigem);
+    }
+
+    return payload;
+  }
+
+  function prepararDadosParaDuplicacao(dados) {
+    if (!dados || typeof dados !== 'object') return null;
+
+    const payload = { ...dados };
+    delete payload.id;
+    delete payload.status;
+    delete payload.dataCriacao;
+    delete payload.dataAtualizacao;
+    delete payload.data_criacao;
+    delete payload.data_atualizacao;
+
+    return normalizarObservacoesDuplicacao(payload);
+  }
+
+  function salvarRascunhoDuplicacao(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+
+    try {
+      sessionStorage.setItem(DUPLICACAO_DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function carregarRascunhoDuplicacao() {
+    try {
+      const raw = sessionStorage.getItem(DUPLICACAO_DRAFT_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      return normalizarObservacoesDuplicacao(parsed);
+    } catch {
+      return null;
+    }
+  }
+
+  function limparRascunhoDuplicacao() {
+    try {
+      sessionStorage.removeItem(DUPLICACAO_DRAFT_STORAGE_KEY);
+    } catch {}
+  }
+
+  function navegarParaDuplicacao(payload) {
+    const dados = prepararDadosParaDuplicacao(payload);
+    if (!dados) return false;
+
+    const salvo = salvarRascunhoDuplicacao(dados);
+    if (!salvo) return false;
+
+    window.location.href = 'index.html?duplicar=1';
+    return true;
+  }
+
   async function duplicarFicha() {
     try {
-      habilitarCampos();
+      let dados = (modoVisualizacao && fichaVisualizacaoAtual)
+        ? { ...fichaVisualizacaoAtual }
+        : coletarDadosFormulario();
 
-      const dados = coletarDadosFormulario();
-      delete dados.id;
+      const temObservacoes = !!obterObservacoesPreferencial(dados);
+      if (modoVisualizacao && !temObservacoes) {
+        const fichaId = Number.parseInt(String(fichaAtualId || ''), 10);
+        if (Number.isInteger(fichaId) && fichaId > 0) {
+          const fichaBanco = await db.buscarFicha(fichaId);
+          const dadosBanco = fichaBanco ? converterBancoParaForm(fichaBanco) : null;
 
-      const novoId = await db.salvarFicha(dados);
+          if (!dados || typeof dados !== 'object') {
+            dados = dadosBanco || dados;
+          } else if (dadosBanco && obterObservacoesPreferencial(dadosBanco)) {
+            if (!String(dados.observacoes || '').trim()) {
+              dados.observacoes = dadosBanco.observacoes || dadosBanco.observacoesHtml || '';
+            }
+            if (!String(dados.observacoesHtml || '').trim()) {
+              dados.observacoesHtml = dadosBanco.observacoesHtml || dadosBanco.observacoes || '';
+            }
+            if (!String(dados.observacoesPlainText || '').trim() && String(dadosBanco.observacoesPlainText || '').trim()) {
+              dados.observacoesPlainText = dadosBanco.observacoesPlainText;
+            }
+          }
+        }
+      }
 
-      mostrarToast('Ficha duplicada com sucesso!', 'success');
-
-      setTimeout(() => {
-        window.location.href = `index.html?editar=${novoId}`;
-      }, 1000);
+      const iniciouDuplicacao = navegarParaDuplicacao(dados);
+      if (!iniciouDuplicacao) {
+        throw new Error('Falha ao preparar duplicação');
+      }
 
     } catch (error) {
       mostrarToast('Erro ao duplicar ficha', 'error');
@@ -385,6 +499,19 @@
     return true;
   }
 
+  function coletarObservacoesFormulario() {
+    const observacoesTextarea = document.getElementById('observacoes');
+    const valorTextarea = observacoesTextarea?.value || '';
+
+    if (!window.richTextEditor || typeof window.richTextEditor.getContent !== 'function') {
+      return valorTextarea;
+    }
+
+    const valorEditor = String(window.richTextEditor.getContent() || '');
+    if (valorEditor.trim()) return valorEditor;
+    return valorTextarea;
+  }
+
   function coletarDadosFormulario() {
     let imagensData = [];
     if (typeof window.getImagens === 'function') {
@@ -397,6 +524,7 @@
     const temGola = gola !== '';
     const reforcoGola = (temGola && !isSocial) ? (document.getElementById('reforcoGola')?.value || 'nao') : 'nao';
     const aberturaLateral = isPolo ? (document.getElementById('aberturaLateral')?.value || 'nao') : 'nao';
+    const observacoes = coletarObservacoesFormulario();
 
     const dados = {
       cliente: document.getElementById('cliente')?.value || '',
@@ -435,7 +563,7 @@
       faixaCor: document.getElementById('faixaCor')?.value || '',
       arte: document.getElementById('arte')?.value || '',
       comNomes: Number(normalizarComNomesValor(document.getElementById('comNomes')?.value || '0')),
-      observacoes: document.getElementById('observacoes')?.value || '',
+      observacoes,
       imagensData: JSON.stringify(imagensData),
       imagemData: imagensData.length > 0 ? imagensData[0].src : ''
     };
@@ -466,13 +594,47 @@
 
     const editarId = params.get('editar');
     const visualizarId = params.get('visualizar');
+    const duplicar = params.get('duplicar');
 
     if (editarId) {
       modoVisualizacao = false;
+      fichaVisualizacaoAtual = null;
+      if (typeof window.setFichaVisualizacaoData === 'function') {
+        window.setFichaVisualizacaoData(null);
+      }
       await carregarFichaParaEdicao(parseInt(editarId));
     } else if (visualizarId) {
       modoVisualizacao = true;
       await carregarFichaParaVisualizacao(parseInt(visualizarId));
+    } else if (duplicar) {
+      modoVisualizacao = false;
+      fichaVisualizacaoAtual = null;
+      if (typeof window.setFichaVisualizacaoData === 'function') {
+        window.setFichaVisualizacaoData(null);
+      }
+
+      const rascunho = carregarRascunhoDuplicacao();
+      limparRascunhoDuplicacao();
+
+      if (rascunho) {
+        setTimeout(() => {
+          preencherFormulario(rascunho);
+          configurarBotoesAcao();
+          mostrarToast('Cópia carregada. Clique em salvar para persistir a nova ficha.', 'success');
+        }, 100);
+      } else {
+        mostrarToast('Não foi possível carregar os dados para duplicação.', 'error');
+      }
+
+      const novaUrl = new URL(window.location.href);
+      novaUrl.searchParams.delete('duplicar');
+      window.history.replaceState({}, '', novaUrl.toString());
+    } else {
+      modoVisualizacao = false;
+      fichaVisualizacaoAtual = null;
+      if (typeof window.setFichaVisualizacaoData === 'function') {
+        window.setFichaVisualizacaoData(null);
+      }
     }
   }
 
@@ -516,111 +678,21 @@
 
       const ficha = converterBancoParaForm(fichaBanco);
 
-      setTimeout(() => {
-        preencherFormulario(ficha);
-        desabilitarCampos();
-        configurarBotoesAcao();
+      fichaVisualizacaoAtual = { ...ficha };
 
-        if (typeof window.gerarVersaoImpressao === 'function') {
-          setTimeout(() => window.gerarVersaoImpressao(true), 120);
-        }
-      }, 100);
-
-      const header = document.querySelector('header h1');
-      if (header) {
-        header.innerHTML = `<i class="fas fa-eye"></i> Visualizando Ficha #${id}`;
+      if (typeof window.setFichaVisualizacaoData === 'function') {
+        window.setFichaVisualizacaoData(fichaVisualizacaoAtual);
       }
 
-      document.body.classList.add('modo-visualizacao');
+      if (typeof window.gerarVersaoImpressao === 'function') {
+        setTimeout(() => {
+          window.gerarVersaoImpressao(true, fichaVisualizacaoAtual);
+        }, 120);
+      }
 
     } catch (error) {
       mostrarToast('Erro ao carregar ficha para visualização', 'error');
     }
-  }
-
-  function desabilitarCampos() {
-    const campos = document.querySelectorAll('input, select, textarea');
-    campos.forEach(campo => {
-      campo.disabled = true;
-      campo.style.opacity = '0.8';
-      campo.style.cursor = 'not-allowed';
-    });
-
-    const botoesOcultar = document.querySelectorAll('#adicionarProduto, #ordenarProdutos, .remover-produto, .duplicar-produto, #imageUpload, .btn-add-produto, .image-delete-btn, .image-drag-handle, .drag-handle');
-    botoesOcultar.forEach(btn => {
-      btn.style.display = 'none';
-    });
-
-    const richEditor = document.getElementById('richTextEditor');
-    if (richEditor) {
-      richEditor.setAttribute('contenteditable', 'false');
-      richEditor.style.pointerEvents = 'none';
-      richEditor.style.opacity = '0.9';
-      richEditor.style.backgroundColor = '#f8f9fa';
-      richEditor.style.cursor = 'not-allowed';
-    }
-
-    const richToolbar = document.querySelector('.rich-text-toolbar');
-    if (richToolbar) {
-      richToolbar.style.pointerEvents = 'none';
-      richToolbar.style.opacity = '0.55';
-    }
-
-    const style = document.createElement('style');
-    style.id = 'estiloVisualizacao';
-    style.textContent = `
-      .modo-visualizacao .card {
-        position: relative;
-      }
-      .modo-visualizacao input:disabled,
-      .modo-visualizacao select:disabled,
-      .modo-visualizacao textarea:disabled {
-        background-color: #f8f9fa !important;
-        border-color: #e9ecef !important;
-      }
-      .modo-visualizacao .image-card {
-        pointer-events: none;
-      }
-      .modo-visualizacao .image-delete-btn,
-      .modo-visualizacao .image-drag-handle {
-        display: none !important;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function habilitarCampos() {
-    const campos = document.querySelectorAll('input, select, textarea');
-    campos.forEach(campo => {
-      campo.disabled = false;
-      campo.style.opacity = '1';
-      campo.style.cursor = '';
-    });
-
-    const botoesOcultar = document.querySelectorAll('#adicionarProduto, #ordenarProdutos, .remover-produto, .duplicar-produto, #imageUpload, .btn-add-produto');
-    botoesOcultar.forEach(btn => {
-      btn.style.display = '';
-    });
-
-    const richEditor = document.getElementById('richTextEditor');
-    if (richEditor) {
-      richEditor.setAttribute('contenteditable', 'true');
-      richEditor.style.pointerEvents = '';
-      richEditor.style.opacity = '';
-      richEditor.style.backgroundColor = '';
-      richEditor.style.cursor = '';
-    }
-
-    const richToolbar = document.querySelector('.rich-text-toolbar');
-    if (richToolbar) {
-      richToolbar.style.pointerEvents = '';
-      richToolbar.style.opacity = '';
-    }
-
-    const estilo = document.getElementById('estiloVisualizacao');
-    if (estilo) estilo.remove();
-
-    document.body.classList.remove('modo-visualizacao');
   }
 
   // Parser de imagens
@@ -741,6 +813,21 @@
 
     if (window.richTextEditor) {
       window.richTextEditor.setContent(observacoesSalvas);
+    }
+
+    if (observacoesSalvas) {
+      setTimeout(() => {
+        const observacoesAtualInput = (document.getElementById('observacoes')?.value || '').trim();
+        const observacoesAtualEditor = (window.richTextEditor && typeof window.richTextEditor.getContent === 'function')
+          ? String(window.richTextEditor.getContent() || '').trim()
+          : '';
+
+        if (!observacoesAtualInput && !observacoesAtualEditor) {
+          const input = document.getElementById('observacoes');
+          if (input) input.value = observacoesSalvas;
+          if (window.richTextEditor) window.richTextEditor.setContent(observacoesSalvas);
+        }
+      }, 380);
     }
 
     const selectComNomes = document.getElementById('comNomes');

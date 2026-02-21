@@ -19,6 +19,182 @@
 
   let imagens = [];
   let alertaLimiteProdutosFechado = false;
+  let fichaVisualizacaoDireta = null;
+
+  function valorEhSim(valor) {
+    if (valor === true || valor === 1) return true;
+    const texto = String(valor || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    return texto === 'sim' || texto === 'true' || texto === '1';
+  }
+
+  function obterValorFicha(ficha, chave, fallback = '') {
+    if (!ficha || typeof ficha !== 'object') return fallback;
+
+    if (ficha[chave] !== undefined && ficha[chave] !== null) return ficha[chave];
+
+    const snakeCase = chave.replace(/[A-Z]/g, letra => `_${letra.toLowerCase()}`);
+    if (ficha[snakeCase] !== undefined && ficha[snakeCase] !== null) return ficha[snakeCase];
+
+    return fallback;
+  }
+
+  function parseArrayJson(valor) {
+    if (Array.isArray(valor)) return valor;
+    if (typeof valor !== 'string') return [];
+    try {
+      const parsed = JSON.parse(valor);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function normalizarProdutosFicha(ficha) {
+    const produtosRaw = obterValorFicha(ficha, 'produtos', []);
+    const lista = Array.isArray(produtosRaw) ? produtosRaw : parseArrayJson(produtosRaw);
+
+    return lista
+      .map(item => {
+        const produto = String(item?.produto || item?.descricao || '').trim();
+        return {
+          tamanho: String(item?.tamanho || '').trim(),
+          quantidade: String(item?.quantidade || '').trim(),
+          produto,
+          detalhesProduto: String(item?.detalhesProduto || item?.detalhes || '').trim(),
+          descricao: produto
+        };
+      })
+      .filter(item => item.tamanho || item.quantidade || item.produto || item.detalhesProduto);
+  }
+
+  function normalizarImagensFicha(ficha) {
+    const imagensDiretas = obterValorFicha(ficha, 'imagens', []);
+    const imagensDataRaw = obterValorFicha(ficha, 'imagensData', []);
+    const imagemDataRaw = obterValorFicha(ficha, 'imagemData', '');
+
+    const candidatas = [];
+
+    if (Array.isArray(imagensDiretas) && imagensDiretas.length > 0) {
+      candidatas.push(...imagensDiretas);
+    } else {
+      candidatas.push(...parseArrayJson(imagensDataRaw));
+    }
+
+    if (candidatas.length === 0 && typeof imagemDataRaw === 'string' && imagemDataRaw.trim()) {
+      candidatas.push({ src: imagemDataRaw.trim(), descricao: '' });
+    }
+
+    return candidatas
+      .map(item => {
+        if (typeof item === 'string') {
+          return { src: item, descricao: '' };
+        }
+
+        if (!item || typeof item !== 'object') return null;
+        const src = String(item.src || item.url || '').trim();
+        if (!src) return null;
+
+        return {
+          src,
+          descricao: String(item.descricao || item.description || '').trim()
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function normalizarFichaVisualizacao(ficha) {
+    if (!ficha || typeof ficha !== 'object') return null;
+
+    const imagens = normalizarImagensFicha(ficha);
+    const observacoesHtml = String(obterValorFicha(ficha, 'observacoesHtml', '') || '');
+    const observacoesPlainText = String(obterValorFicha(ficha, 'observacoesPlainText', '') || '');
+    const observacoes = String(obterValorFicha(ficha, 'observacoes', '') || observacoesHtml || observacoesPlainText || '');
+
+    return {
+      id: obterValorFicha(ficha, 'id', ''),
+      cliente: String(obterValorFicha(ficha, 'cliente', '') || ''),
+      vendedor: String(obterValorFicha(ficha, 'vendedor', '') || ''),
+      dataInicio: String(obterValorFicha(ficha, 'dataInicio', '') || ''),
+      numeroVenda: String(obterValorFicha(ficha, 'numeroVenda', '') || ''),
+      dataEntrega: String(obterValorFicha(ficha, 'dataEntrega', '') || ''),
+      evento: String(obterValorFicha(ficha, 'evento', 'nao') || 'nao'),
+      produtos: normalizarProdutosFicha(ficha),
+      material: String(obterValorFicha(ficha, 'material', '') || ''),
+      composicao: String(obterValorFicha(ficha, 'composicao', '') || ''),
+      corMaterial: String(obterValorFicha(ficha, 'corMaterial', '') || ''),
+      manga: String(obterValorFicha(ficha, 'manga', '') || ''),
+      acabamentoManga: String(obterValorFicha(ficha, 'acabamentoManga', '') || ''),
+      larguraManga: String(obterValorFicha(ficha, 'larguraManga', '') || ''),
+      corAcabamentoManga: String(obterValorFicha(ficha, 'corAcabamentoManga', '') || ''),
+      gola: String(obterValorFicha(ficha, 'gola', '') || ''),
+      corGola: String(obterValorFicha(ficha, 'corGola', '') || ''),
+      acabamentoGola: String(obterValorFicha(ficha, 'acabamentoGola', '') || ''),
+      larguraGola: String(obterValorFicha(ficha, 'larguraGola', '') || ''),
+      corPeitilhoInterno: String(obterValorFicha(ficha, 'corPeitilhoInterno', '') || ''),
+      corPeitilhoExterno: String(obterValorFicha(ficha, 'corPeitilhoExterno', '') || ''),
+      corPeDeGolaInterno: String(obterValorFicha(ficha, 'corPeDeGolaInterno', '') || ''),
+      corPeDeGolaExterno: String(obterValorFicha(ficha, 'corPeDeGolaExterno', '') || ''),
+      corBotao: String(obterValorFicha(ficha, 'corBotao', '') || ''),
+      aberturaLateral: String(obterValorFicha(ficha, 'aberturaLateral', 'nao') || 'nao'),
+      corAberturaLateral: String(obterValorFicha(ficha, 'corAberturaLateral', '') || ''),
+      reforcoGola: String(obterValorFicha(ficha, 'reforcoGola', 'nao') || 'nao'),
+      corReforco: String(obterValorFicha(ficha, 'corReforco', '') || ''),
+      bolso: String(obterValorFicha(ficha, 'bolso', 'nenhum') || 'nenhum'),
+      filete: String(obterValorFicha(ficha, 'filete', 'nao') || 'nao'),
+      fileteLocal: String(obterValorFicha(ficha, 'fileteLocal', '') || ''),
+      fileteCor: String(obterValorFicha(ficha, 'fileteCor', '') || ''),
+      faixa: String(obterValorFicha(ficha, 'faixa', 'nao') || 'nao'),
+      faixaLocal: String(obterValorFicha(ficha, 'faixaLocal', '') || ''),
+      faixaCor: String(obterValorFicha(ficha, 'faixaCor', '') || ''),
+      arte: String(obterValorFicha(ficha, 'arte', '') || ''),
+      comNomes: normalizarComNomesValor(obterValorFicha(ficha, 'comNomes', '0')),
+      observacoes,
+      observacoesHtml,
+      imagens,
+      imagensData: JSON.stringify(imagens),
+      imagemData: imagens.length > 0 ? imagens[0].src : ''
+    };
+  }
+
+  function setFichaVisualizacaoDireta(ficha) {
+    fichaVisualizacaoDireta = normalizarFichaVisualizacao(ficha);
+  }
+
+  function getFichaVisualizacaoDireta() {
+    if (!fichaVisualizacaoDireta) return null;
+
+    return {
+      ...fichaVisualizacaoDireta,
+      produtos: Array.isArray(fichaVisualizacaoDireta.produtos)
+        ? fichaVisualizacaoDireta.produtos.map(item => ({ ...item }))
+        : [],
+      imagens: Array.isArray(fichaVisualizacaoDireta.imagens)
+        ? fichaVisualizacaoDireta.imagens.map(item => ({ ...item }))
+        : []
+    };
+  }
+
+  function obterTextoOpcaoSelect(selectId, valor) {
+    const raw = String(valor ?? '').trim();
+    if (!raw || raw === '-' || raw === 'nenhum') return '';
+
+    const select = document.getElementById(selectId);
+    if (!select || String(select.tagName || '').toLowerCase() !== 'select') {
+      return capitalizeFirstLetter(raw.replace(/[_-]+/g, ' '));
+    }
+
+    const option = Array.from(select.options || []).find(opt => opt.value === raw);
+    if (option) {
+      if (!option.value || option.value === '-' || option.value === 'nenhum') return '';
+      return option.text || '';
+    }
+
+    return capitalizeFirstLetter(raw.replace(/[_-]+/g, ' '));
+  }
 
   // ==================== CLOUDINARY CONFIG ====================
   let cloudinaryConfig = null;
@@ -1358,6 +1534,21 @@
   }
 
   function coletarFicha() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('visualizar') && fichaVisualizacaoDireta) {
+      const fichaVisualizacao = getFichaVisualizacaoDireta();
+      if (fichaVisualizacao) {
+        const imagens = Array.isArray(fichaVisualizacao.imagens) ? fichaVisualizacao.imagens : [];
+        return {
+          ...fichaVisualizacao,
+          comNomes: Number(normalizarComNomesValor(fichaVisualizacao.comNomes)),
+          imagens,
+          imagensData: JSON.stringify(imagens),
+          imagemData: imagens.length > 0 ? imagens[0].src : ''
+        };
+      }
+    }
+
     const produtos = [];
     document.querySelectorAll('#produtosTable tr').forEach(row => {
       const tamanho = row.querySelector('.tamanho')?.value || '';
@@ -1729,13 +1920,21 @@
     });
   }
 
-  async function gerarVersaoImpressao(apenasPreview = false) {
+  async function gerarVersaoImpressao(apenasPreview = false, fichaOrigem = null) {
     ocultarTodosToasts();
     const paramsUrl = new URLSearchParams(window.location.search);
     const manterVersaoImpressao = paramsUrl.has('visualizar');
+    const fichaDireta = fichaOrigem
+      ? normalizarFichaVisualizacao(fichaOrigem)
+      : (manterVersaoImpressao ? getFichaVisualizacaoDireta() : null);
+
+    if (fichaDireta) {
+      fichaVisualizacaoDireta = fichaDireta;
+    }
+
+    const usarFichaDireta = !!fichaDireta;
     const hoje = new Date();
     const dataEmissao = hoje.toLocaleDateString('pt-BR') + ' ' + hoje.toLocaleTimeString('pt-BR');
-    const isEvento = document.getElementById('evento')?.value === 'sim';
 
     const setText = (id, val, fallback = '') => {
       try {
@@ -1767,7 +1966,7 @@
       }
     };
 
-    const getSelectText = id => {
+    const getSelectTextDom = id => {
       try {
         const sel = document.getElementById(id);
         if (!sel) return '';
@@ -1791,7 +1990,7 @@
       }
     };
 
-    const getInputValue = id => {
+    const getInputValueDom = id => {
       try {
         const el = document.getElementById(id);
         return el ? (el.value || '') : '';
@@ -1801,13 +2000,27 @@
       }
     };
 
-    setText('print-dataEmissao', dataEmissao);
-    setText('print-numeroVenda', getInputValue('numeroVenda'), '-');
-    setText('print-cliente', capitalizeFirstLetter(getInputValue('cliente')), '-');
-    setText('print-vendedor', capitalizeFirstLetter(getInputValue('vendedor')), '-');
+    const getValorCampo = id => {
+      if (!usarFichaDireta) return getInputValueDom(id);
+      const valor = fichaDireta[id];
+      if (valor === undefined || valor === null) return '';
+      return String(valor);
+    };
 
-    setTextWithHighlight('print-dataInicio', formatarDataBrasil(getInputValue('dataInicio')), isEvento, '-');
-    setTextWithHighlight('print-dataEntrega', formatarDataBrasil(getInputValue('dataEntrega')), isEvento, '-');
+    const getSelectText = id => {
+      if (!usarFichaDireta) return getSelectTextDom(id);
+      return obterTextoOpcaoSelect(id, getValorCampo(id));
+    };
+
+    const isEvento = valorEhSim(getValorCampo('evento'));
+
+    setText('print-dataEmissao', dataEmissao);
+    setText('print-numeroVenda', getValorCampo('numeroVenda'), '-');
+    setText('print-cliente', capitalizeFirstLetter(getValorCampo('cliente')), '-');
+    setText('print-vendedor', capitalizeFirstLetter(getValorCampo('vendedor')), '-');
+
+    setTextWithHighlight('print-dataInicio', formatarDataBrasil(getValorCampo('dataInicio')), isEvento, '-');
+    setTextWithHighlight('print-dataEntrega', formatarDataBrasil(getValorCampo('dataEntrega')), isEvento, '-');
 
     const eventoEl = document.getElementById('print-evento');
     if (eventoEl) {
@@ -1818,7 +2031,7 @@
       }
     }
 
-    const dataEntregaVal = getInputValue('dataEntrega');
+    const dataEntregaVal = getValorCampo('dataEntrega');
     const prazoEl = document.getElementById('print-prazo');
     if (prazoEl && dataEntregaVal) {
       const hojeDate = new Date();
@@ -1846,34 +2059,68 @@
       prazoEl.textContent = '-';
     }
 
+    const produtosFonte = usarFichaDireta
+      ? (Array.isArray(fichaDireta.produtos) ? fichaDireta.produtos : [])
+      : [];
+
     const printBody = document.getElementById('print-produtosTable');
     if (printBody) {
       printBody.innerHTML = '';
-      document.querySelectorAll('#produtosTable tr').forEach(row => {
-        const tamanho = row.querySelector('.tamanho')?.value;
-        const quantidade = row.querySelector('.quantidade')?.value;
-        const produto = row.querySelector('.produto')?.value || row.querySelector('.descricao')?.value;
-        const detalhesProduto = row.querySelector('.detalhes-produto')?.value;
-        const produtoFormatado = capitalizeFirstLetter(produto);
-        const detalhesFormatado = capitalizeFirstLetter(detalhesProduto);
-        if (!tamanho && !quantidade && !produtoFormatado && !detalhesFormatado) return;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${tamanho || '-'}</td>
-          <td>${quantidade || '-'}</td>
-          <td>${produtoFormatado || '-'}</td>
-          <td>${detalhesFormatado || '-'}</td>
-        `;
-        printBody.appendChild(tr);
-      });
+
+      if (usarFichaDireta) {
+        produtosFonte.forEach(item => {
+          const tamanho = String(item?.tamanho || '').trim();
+          const quantidade = String(item?.quantidade || '').trim();
+          const produto = String(item?.produto || item?.descricao || '').trim();
+          const detalhesProduto = String(item?.detalhesProduto || item?.detalhes || '').trim();
+
+          const produtoFormatado = capitalizeFirstLetter(produto);
+          const detalhesFormatado = capitalizeFirstLetter(detalhesProduto);
+          if (!tamanho && !quantidade && !produtoFormatado && !detalhesFormatado) return;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${tamanho || '-'}</td>
+            <td>${quantidade || '-'}</td>
+            <td>${produtoFormatado || '-'}</td>
+            <td>${detalhesFormatado || '-'}</td>
+          `;
+          printBody.appendChild(tr);
+        });
+      } else {
+        document.querySelectorAll('#produtosTable tr').forEach(row => {
+          const tamanho = row.querySelector('.tamanho')?.value;
+          const quantidade = row.querySelector('.quantidade')?.value;
+          const produto = row.querySelector('.produto')?.value || row.querySelector('.descricao')?.value;
+          const detalhesProduto = row.querySelector('.detalhes-produto')?.value;
+          const produtoFormatado = capitalizeFirstLetter(produto);
+          const detalhesFormatado = capitalizeFirstLetter(detalhesProduto);
+          if (!tamanho && !quantidade && !produtoFormatado && !detalhesFormatado) return;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${tamanho || '-'}</td>
+            <td>${quantidade || '-'}</td>
+            <td>${produtoFormatado || '-'}</td>
+            <td>${detalhesFormatado || '-'}</td>
+          `;
+          printBody.appendChild(tr);
+        });
+      }
     }
 
-    setText('print-totalItens', document.getElementById('totalItens')?.textContent || '0', '0');
+    const totalItensDireto = usarFichaDireta
+      ? produtosFonte.reduce((total, item) => total + (parseInt(String(item?.quantidade || ''), 10) || 0), 0)
+      : null;
+    setText(
+      'print-totalItens',
+      usarFichaDireta ? String(totalItensDireto) : (document.getElementById('totalItens')?.textContent || '0'),
+      '0'
+    );
 
-    const materialVal = getInputValue('material');
+    const materialVal = getValorCampo('material');
     setText('print-material', materialVal, '-');
 
-    const corMaterialVal = getInputValue('corMaterial');
+    const corMaterialVal = getValorCampo('corMaterial');
     setText('print-corMaterial', corMaterialVal, '-');
 
     const mangaText = getSelectText('manga');
@@ -1882,18 +2129,18 @@
     const acabamentoMangaText = getSelectText('acabamentoManga');
     setText('print-acabamentoManga', acabamentoMangaText, '-');
 
-    const acabamentoMangaVal = getInputValue('acabamentoManga');
+    const acabamentoMangaVal = getValorCampo('acabamentoManga');
     const temAcabamentoMangaExtra = isAcabamentoMangaComExtras(acabamentoMangaVal);
 
-    const larguraMangaVal = getInputValue('larguraManga');
+    const larguraMangaVal = getValorCampo('larguraManga');
     setText('print-larguraManga', larguraMangaVal);
     showDiv('print-larguraMangaDiv', temAcabamentoMangaExtra && !!larguraMangaVal);
 
-    const corAcabamentoMangaVal = getInputValue('corAcabamentoManga');
+    const corAcabamentoMangaVal = getValorCampo('corAcabamentoManga');
     setText('print-corAcabamentoManga', corAcabamentoMangaVal);
     showDiv('print-corAcabamentoMangaDiv', temAcabamentoMangaExtra && !!corAcabamentoMangaVal);
 
-    const golaVal = getInputValue('gola');
+    const golaVal = getValorCampo('gola');
     const golaText = getSelectText('gola');
     const isPolo = golaVal === 'polo' || golaVal === 'v_polo';
     const isSocial = golaVal === 'social';
@@ -1901,7 +2148,7 @@
 
     setText('print-gola', golaText, '-');
 
-    const corGolaVal = getInputValue('corGola');
+    const corGolaVal = getValorCampo('corGola');
     setText('print-corGola', corGolaVal);
     showDiv('print-corGolaDiv', temGola && !isSocial && !!corGolaVal);
 
@@ -1909,115 +2156,136 @@
     setText('print-acabamentoGola', acabamentoGolaText);
     showDiv('print-acabamentoGolaDiv', !isPolo && !isSocial && !!acabamentoGolaText);
 
-    const larguraGolaVal = getInputValue('larguraGola');
+    const larguraGolaVal = getValorCampo('larguraGola');
     setText('print-larguraGola', larguraGolaVal);
     showDiv('print-larguraGolaDiv', !isPolo && !isSocial && !!larguraGolaVal);
 
-    const reforcoGolaVal = document.getElementById('reforcoGola')?.value || 'nao';
+    const reforcoGolaVal = getValorCampo('reforcoGola') || 'nao';
     const temReforco = temGola && !isSocial && reforcoGolaVal === 'sim';
     setText('print-reforcoGola', temReforco ? 'Sim' : '');
     showDiv('print-reforcoGolaDiv', temReforco);
 
-    const corReforcoVal = getInputValue('corReforco');
+    const corReforcoVal = getValorCampo('corReforco');
     setText('print-corReforco', corReforcoVal);
     showDiv('print-corReforcoDiv', temReforco && !!corReforcoVal);
 
-    const corPeitilhoInternoVal = getInputValue('corPeitilhoInterno');
+    const corPeitilhoInternoVal = getValorCampo('corPeitilhoInterno');
     setText('print-corPeitilhoInterno', corPeitilhoInternoVal);
     showDiv('print-corPeitilhoInternoDiv', isPolo && !!corPeitilhoInternoVal);
 
-    const corPeitilhoExternoVal = getInputValue('corPeitilhoExterno');
+    const corPeitilhoExternoVal = getValorCampo('corPeitilhoExterno');
     setText('print-corPeitilhoExterno', corPeitilhoExternoVal);
     showDiv('print-corPeitilhoExternoDiv', isPolo && !!corPeitilhoExternoVal);
 
-    const corBotaoVal = getInputValue('corBotao');
+    const corBotaoVal = getValorCampo('corBotao');
     setText('print-corBotao', corBotaoVal);
     showDiv('print-corBotaoDiv', (isPolo || isSocial) && !!corBotaoVal);
 
-    const corPeDeGolaInternoVal = getInputValue('corPeDeGolaInterno');
+    const corPeDeGolaInternoVal = getValorCampo('corPeDeGolaInterno');
     setText('print-corPeDeGolaInterno', corPeDeGolaInternoVal);
     showDiv('print-corPeDeGolaInternoDiv', isSocial && !!corPeDeGolaInternoVal);
 
-    const corPeDeGolaExternoVal = getInputValue('corPeDeGolaExterno');
+    const corPeDeGolaExternoVal = getValorCampo('corPeDeGolaExterno');
     setText('print-corPeDeGolaExterno', corPeDeGolaExternoVal);
     showDiv('print-corPeDeGolaExternoDiv', isSocial && !!corPeDeGolaExternoVal);
 
-    const aberturaLateralVal = document.getElementById('aberturaLateral')?.value || 'nao';
+    const aberturaLateralVal = getValorCampo('aberturaLateral') || 'nao';
     const temAbertura = isPolo && aberturaLateralVal === 'sim';
     setText('print-aberturaLateral', temAbertura ? 'Sim' : '');
     showDiv('print-aberturaLateralDiv', temAbertura);
 
-    const corAberturaLateralVal = getInputValue('corAberturaLateral');
+    const corAberturaLateralVal = getValorCampo('corAberturaLateral');
     setText('print-corAberturaLateral', corAberturaLateralVal);
     showDiv('print-corAberturaLateralDiv', temAbertura && !!corAberturaLateralVal);
 
     const bolsoText = getSelectText('bolso');
     setText('print-bolso', bolsoText, '-');
 
-    const fileteVal = document.getElementById('filete')?.value || 'nao';
+    const fileteVal = getValorCampo('filete') || 'nao';
     const temFilete = fileteVal === 'sim';
     setText('print-filete', temFilete ? 'Sim' : 'Não');
 
-    const fileteLocalVal = getInputValue('fileteLocal');
+    const fileteLocalVal = getValorCampo('fileteLocal');
     setText('print-fileteLocal', fileteLocalVal);
     showDiv('print-fileteLocalDiv', temFilete && !!fileteLocalVal);
 
-    const fileteCorVal = getInputValue('fileteCor');
+    const fileteCorVal = getValorCampo('fileteCor');
     setText('print-fileteCor', fileteCorVal);
     showDiv('print-fileteCorDiv', temFilete && !!fileteCorVal);
 
-    const faixaVal = document.getElementById('faixa')?.value || 'nao';
+    const faixaVal = getValorCampo('faixa') || 'nao';
     const temFaixa = faixaVal === 'sim';
     setText('print-faixa', temFaixa ? 'Sim' : 'Não');
 
-    const faixaLocalVal = getInputValue('faixaLocal');
+    const faixaLocalVal = getValorCampo('faixaLocal');
     setText('print-faixaLocal', faixaLocalVal);
     showDiv('print-faixaLocalDiv', temFaixa && !!faixaLocalVal);
 
-    const faixaCorVal = getInputValue('faixaCor');
+    const faixaCorVal = getValorCampo('faixaCor');
     setText('print-faixaCor', faixaCorVal);
     showDiv('print-faixaCorDiv', temFaixa && !!faixaCorVal);
 
     const arteText = getSelectText('arte');
     setText('print-arte', arteText, '-');
 
-    const comNomesVal = normalizarComNomesValor(getInputValue('comNomes'));
+    const comNomesVal = normalizarComNomesValor(getValorCampo('comNomes'));
     const comNomesText = marcadorComNomesPorValor(comNomesVal);
     setText('print-comNomes', capitalizeFirstLetter(comNomesText), '-');
 
-    const composicaoVal = getInputValue('composicao');
+    const composicaoVal = getValorCampo('composicao');
     setText('print-composicao', composicaoVal, '-');
 
     const printObservacoesEl = document.getElementById('print-observacoes');
     if (printObservacoesEl) {
-      if (window.richTextEditor) {
+      if (usarFichaDireta) {
+        const observacoesHtml = String(fichaDireta.observacoesHtml || '').trim();
+        const observacoesTexto = String(fichaDireta.observacoes || '').trim();
+        printObservacoesEl.innerHTML = observacoesHtml || observacoesTexto || 'Nenhuma';
+      } else if (window.richTextEditor) {
         const htmlContent = window.richTextEditor.getContent();
         printObservacoesEl.innerHTML = htmlContent || 'Nenhuma';
       } else {
-        const observacoesVal = getInputValue('observacoes');
+        const observacoesVal = getValorCampo('observacoes');
         printObservacoesEl.innerHTML = observacoesVal || 'Nenhuma';
       }
     }
 
     const printImagesContainer = document.getElementById('print-imagesContainer');
     const printImagesSection = document.getElementById('print-imagesSection');
-    const imgs = window.getImagens ? window.getImagens() : [];
+    const imgs = usarFichaDireta
+      ? (Array.isArray(fichaDireta.imagens) ? fichaDireta.imagens : [])
+      : (window.getImagens ? window.getImagens() : []);
+
+    const imagensNormalizadas = Array.isArray(imgs)
+      ? imgs
+        .map(item => {
+          if (typeof item === 'string') return { src: item, descricao: '' };
+          if (!item || typeof item !== 'object') return null;
+          const src = String(item.src || item.url || '').trim();
+          if (!src) return null;
+          return {
+            src,
+            descricao: String(item.descricao || item.description || '').trim()
+          };
+        })
+        .filter(Boolean)
+      : [];
 
     if (printImagesContainer) {
       printImagesContainer.innerHTML = '';
-      printImagesContainer.classList.toggle('compact-four', imgs.length === MAX_IMAGES);
-      printImagesContainer.classList.toggle('images-one', imgs.length === 1);
-      printImagesContainer.classList.toggle('images-two', imgs.length === 2);
-      printImagesContainer.classList.toggle('images-three', imgs.length === 3);
+      printImagesContainer.classList.toggle('compact-four', imagensNormalizadas.length === MAX_IMAGES);
+      printImagesContainer.classList.toggle('images-one', imagensNormalizadas.length === 1);
+      printImagesContainer.classList.toggle('images-two', imagensNormalizadas.length === 2);
+      printImagesContainer.classList.toggle('images-three', imagensNormalizadas.length === 3);
 
-      if (imgs.length === 0) {
+      if (imagensNormalizadas.length === 0) {
         if (printImagesSection) printImagesSection.style.display = 'none';
       } else {
         if (printImagesSection) printImagesSection.style.display = 'block';
 
-        imgs.forEach((img, index) => {
+        imagensNormalizadas.forEach((img, index) => {
           const div = document.createElement('div');
-          div.className = imgs.length === 1 ? 'print-image-item single' : 'print-image-item';
+          div.className = imagensNormalizadas.length === 1 ? 'print-image-item single' : 'print-image-item';
 
           div.innerHTML = `
             <img src="${img.src}" alt="Imagem ${index + 1}">
@@ -2537,6 +2805,8 @@
   window.carregarFichaDeArquivo = carregarFichaDeArquivo;
   window.coletarFicha = coletarFicha;
   window.preencherFicha = preencherFicha;
+  window.setFichaVisualizacaoData = setFichaVisualizacaoDireta;
+  window.getFichaVisualizacaoData = getFichaVisualizacaoDireta;
 
   // Prevenção de Reloads
   (function () {

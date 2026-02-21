@@ -11,6 +11,19 @@
   --header-start: #111827;
   --header-end: #1f2937;
   --header-logo-color: #f8fafc;
+  --preview-page-bg: #e2e8f0;
+  --preview-text: #0f172a;
+  --preview-muted: #475569;
+  --preview-surface: #ffffff;
+  --preview-border: #cbd5e1;
+  --preview-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --preview-label: #334155;
+  --preview-separator: #cbd5e1;
+  --preview-table-border: #94a3b8;
+  --preview-table-head-bg: #f1f5f9;
+  --preview-table-head-text: #334155;
+  --preview-observacoes-bg: #f8fafc;
+  --preview-observacoes-border: #94a3b8;
 }
 
 * {
@@ -933,7 +946,7 @@ textarea.form-control {
 /* IMPRESSÃO */
 /* Preview da versao de impressao dentro do modal (tela) */
 body.preview-impressao {
-  background: #e2e8f0;
+  background: var(--preview-page-bg);
 }
 
 body.preview-impressao #print-version {
@@ -945,14 +958,14 @@ body.preview-impressao .print-container {
   margin: 14px auto;
   padding: 14px;
   font-size: 15px;
-  color: #0f172a;
+  color: var(--preview-text);
 }
 
 body.preview-impressao .print-header {
   text-align: center;
   margin-bottom: 10px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--preview-surface);
+  border: 1px solid var(--preview-border);
   border-radius: 12px;
   padding: 12px 14px;
 }
@@ -960,27 +973,27 @@ body.preview-impressao .print-header {
 body.preview-impressao .print-header h1 {
   font-size: 1.21rem;
   margin: 0 0 4px;
-  color: #0f172a;
+  color: var(--preview-text);
 }
 
 body.preview-impressao .print-header p {
   margin: 0;
-  color: #475569;
+  color: var(--preview-muted);
 }
 
 body.preview-impressao .print-card {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--preview-surface);
+  border: 1px solid var(--preview-border);
   border-radius: 12px;
   padding: 12px;
   margin-bottom: 10px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--preview-shadow);
 }
 
 body.preview-impressao .print-card h2 {
   margin: 0 0 10px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--preview-border);
   font-size: 1.08rem;
 }
 
@@ -998,7 +1011,7 @@ body.preview-impressao .print-grid-single {
 }
 
 body.preview-impressao .print-grid-single .print-group-separator {
-  border-top: 1px solid #cbd5e1;
+  border-top: 1px solid var(--preview-separator);
   margin: 2px 0;
   padding-top: 4px;
 }
@@ -1006,7 +1019,7 @@ body.preview-impressao .print-grid-single .print-group-separator {
 body.preview-impressao .print-grid .label,
 body.preview-impressao .print-grid-single .label {
   font-weight: 600;
-  color: #334155;
+  color: var(--preview-label);
 }
 
 body.preview-impressao .print-grid .label i,
@@ -1017,7 +1030,7 @@ body.preview-impressao .print-grid-single .label i {
 }
 
 body.preview-impressao #print-dataInicio {
-  color: #999999;
+  color: var(--preview-muted);
 }
 
 body.preview-impressao #print-dataEntrega {
@@ -1034,20 +1047,20 @@ body.preview-impressao .print-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.95rem;
-  border: 1px solid #94a3b8;
+  border: 1px solid var(--preview-table-border);
 }
 
 body.preview-impressao .print-table th,
 body.preview-impressao .print-table td {
-  border: 1px solid #94a3b8;
+  border: 1px solid var(--preview-table-border);
   padding: 6px 8px;
 }
 
 body.preview-impressao .print-table th {
-  background: #f1f5f9;
+  background: var(--preview-table-head-bg);
   text-align: left;
   font-weight: 700;
-  color: #334155;
+  color: var(--preview-table-head-text);
 }
 
 body.preview-impressao .print-total {
@@ -1058,9 +1071,9 @@ body.preview-impressao .print-total {
 body.preview-impressao .print-observacoes {
   min-height: 84px;
   padding: 8px;
-  border: 1px dashed #94a3b8;
+  border: 1px dashed var(--preview-observacoes-border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--preview-observacoes-bg);
   white-space: pre-wrap;
 }
 
@@ -1627,6 +1640,19 @@ html[data-theme='dark'] {
   --header-start: #0f172a;
   --header-end: #1e293b;
   --header-logo-color: #ffffff;
+  --preview-page-bg: #020617;
+  --preview-text: #e2e8f0;
+  --preview-muted: #94a3b8;
+  --preview-surface: #0f172a;
+  --preview-border: #334155;
+  --preview-shadow: 0 8px 24px rgba(2, 6, 23, 0.45);
+  --preview-label: #cbd5e1;
+  --preview-separator: #334155;
+  --preview-table-border: #475569;
+  --preview-table-head-bg: #1e293b;
+  --preview-table-head-text: #e2e8f0;
+  --preview-observacoes-bg: #111827;
+  --preview-observacoes-border: #475569;
 }
 
 html[data-theme='dark'] body {

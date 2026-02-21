@@ -8,6 +8,27 @@
   const STATUS_CACHE_KEY = 'site_system_status_snapshot';
   const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
   const STATUS_REFRESH_INTERVAL_MS = 60 * 1000;
+  const GREETING_MESSAGE_ROTATION_INTERVAL_MS = 15 * 1000;
+  const DEFAULT_GREETING_STATUS_MESSAGES = [
+    'Fichas atualizadas {{updatedText}}.'
+  ];
+  const DEFAULT_GREETING_STATUS_MESSAGES_BY_PERIOD = Object.freeze({
+    morning: [
+      'Fichas atualizadas {{updatedText}}.',
+      'Bora tomar um café e tentar acordar!',
+      'Que hoje nosso dia seja abeçoado.'
+    ],
+    afternoon: [
+      'Fichas atualizadas {{updatedText}}.',
+      'Pelo menos já tá de tarde.',
+      'Por que o tempo passa mais devagar em {{city}}?'
+    ],
+    night: [
+      'Fichas atualizadas {{updatedText}}.',
+      'Tá trabalhando ainda? Vá descansar!',
+      'Boa noite, espero que essa horas extras valham a pena!'
+    ]
+  });
 
   const API_BASE_URL = detectApiBaseURL();
 
@@ -320,6 +341,90 @@
     }
   }
 
+  function getGreetingPeriod(now) {
+    const hour = now.getHours();
+    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 18) return 'afternoon';
+    return 'night';
+  }
+
+  function getConfiguredGreetingMessages(period) {
+    const selectedPeriod = period || getGreetingPeriod(new Date());
+    const externalGlobalMessages = Array.isArray(window.SITE_GREETING_STATUS_MESSAGES)
+      ? window.SITE_GREETING_STATUS_MESSAGES
+      : [];
+
+    const externalByPeriodRaw = window.SITE_GREETING_STATUS_MESSAGES_BY_PERIOD;
+    const externalByPeriod = externalByPeriodRaw && typeof externalByPeriodRaw === 'object'
+      ? externalByPeriodRaw
+      : {};
+    const externalPeriodMessages = Array.isArray(externalByPeriod[selectedPeriod])
+      ? externalByPeriod[selectedPeriod]
+      : [];
+
+    const baseGlobal = externalGlobalMessages.length > 0
+      ? externalGlobalMessages
+      : DEFAULT_GREETING_STATUS_MESSAGES;
+    const basePeriod = Array.isArray(DEFAULT_GREETING_STATUS_MESSAGES_BY_PERIOD[selectedPeriod])
+      ? DEFAULT_GREETING_STATUS_MESSAGES_BY_PERIOD[selectedPeriod]
+      : [];
+
+    const merged = [
+      ...baseGlobal,
+      ...basePeriod,
+      ...externalPeriodMessages
+    ];
+
+    const normalizedUnique = Array.from(new Set(
+      merged
+        .map(item => normalizeString(item, ''))
+        .filter(Boolean)
+    ));
+
+    return normalizedUnique.length > 0
+      ? normalizedUnique
+      : ['Fichas atualizadas {{updatedText}}.'];
+  }
+
+  let greetingStatusMessages = getConfiguredGreetingMessages(getGreetingPeriod(new Date()));
+  let currentGreetingStatusTemplate = '';
+
+  function pickRandomGreetingStatusTemplate(now, avoidCurrent) {
+    const period = getGreetingPeriod(now || new Date());
+    greetingStatusMessages = getConfiguredGreetingMessages(period);
+
+    if (!Array.isArray(greetingStatusMessages) || greetingStatusMessages.length === 0) {
+      greetingStatusMessages = ['Fichas atualizadas {{updatedText}}.'];
+    }
+
+    if (greetingStatusMessages.length === 1) {
+      currentGreetingStatusTemplate = greetingStatusMessages[0];
+      return currentGreetingStatusTemplate;
+    }
+
+    const candidates = avoidCurrent
+      ? greetingStatusMessages.filter(item => item !== currentGreetingStatusTemplate)
+      : greetingStatusMessages;
+
+    const pool = candidates.length > 0 ? candidates : greetingStatusMessages;
+    const index = Math.floor(Math.random() * pool.length);
+    currentGreetingStatusTemplate = pool[index];
+    return currentGreetingStatusTemplate;
+  }
+
+  function getCurrentGreetingStatusTemplate(now) {
+    const currentPeriod = getGreetingPeriod(now || new Date());
+    const periodMessages = getConfiguredGreetingMessages(currentPeriod);
+
+    greetingStatusMessages = periodMessages;
+
+    if (!currentGreetingStatusTemplate || !periodMessages.includes(currentGreetingStatusTemplate)) {
+      return pickRandomGreetingStatusTemplate(now || new Date(), false);
+    }
+
+    return currentGreetingStatusTemplate;
+  }
+
   function formatGreetingLine(snapshot) {
     const now = new Date();
     const weather = snapshot && snapshot.weather ? snapshot.weather : {};
@@ -328,8 +433,28 @@
     const temperatureText = normalizeString(weather.temperatureText, '--\u00B0C');
     const city = normalizeString(weather.city, 'sua regi\u00E3o');
     const updatedText = formatMinutesAgo(snapshot && snapshot.lastFichaCreatedAt);
+    const statusMessage = formatGreetingStatusMessage(
+      getCurrentGreetingStatusTemplate(now),
+      { updatedText, city, temperatureText }
+    );
 
-    return `${getGreeting(now)} ${formatGreetingDate(now)} ${icon} ${temperatureText} em ${city} | Dados atualizados ${updatedText}.`;
+    return `${getGreeting(now)} ${formatGreetingDate(now)} ${icon} ${temperatureText} em ${city} | ${statusMessage}`;
+  }
+
+  function formatGreetingStatusMessage(template, context) {
+    const safeTemplate = normalizeString(template, 'Fichas atualizadas {{updatedText}}.');
+    const updatedText = normalizeString(context && context.updatedText, 'h\u00E1 0 minutos');
+    const city = normalizeString(context && context.city, 'sua regi\u00E3o');
+    const temperatureText = normalizeString(context && context.temperatureText, '--\u00B0C');
+
+    return safeTemplate
+      .replace(/\{\{\s*updatedText\s*\}\}/g, updatedText)
+      .replace(/\{\{\s*city\s*\}\}/g, city)
+      .replace(/\{\{\s*temperatureText\s*\}\}/g, temperatureText);
+  }
+
+  function rotateGreetingStatusMessage() {
+    pickRandomGreetingStatusTemplate(new Date(), true);
   }
 
   function getStatusBadge(status) {
@@ -341,7 +466,7 @@
   function buildTooltipHtml(snapshot) {
     const systems = snapshot && snapshot.systems ? snapshot.systems : {};
     const rows = [
-      { key: 'turso', label: 'Banco Turso' },
+      { key: 'turso', label: 'Banco de Dados' },
       { key: 'cloudinary', label: 'Cloudinary' },
       { key: 'vercel', label: 'Vercel.app' },
       { key: 'github', label: 'GitHub Status' }
@@ -501,6 +626,10 @@
 
     refreshSnapshot(true);
     window.setInterval(() => {
+      rotateGreetingStatusMessage();
+      renderGreeting(toolbar, snapshot);
+    }, GREETING_MESSAGE_ROTATION_INTERVAL_MS);
+    window.setInterval(() => {
       refreshSnapshot(false);
     }, STATUS_REFRESH_INTERVAL_MS);
   }
@@ -566,3 +695,4 @@
     applyTheme(getSavedTheme(), false);
   });
 })();
+

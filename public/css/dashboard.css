@@ -1076,6 +1076,21 @@ html[data-theme='dark'] .preview-modal-close:hover {
   background: #334155;
 }
 
+html[data-theme='dark'] .preview-modal-body {
+  background: #020617;
+}
+
+html[data-theme='dark'] .preview-modal-iframe {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .preview-modal-loading {
+  background: linear-gradient(180deg, #111827, #0f172a);
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
 html[data-theme='dark'] .loading,
 html[data-theme='dark'] .empty-state {
   color: #94a3b8;
