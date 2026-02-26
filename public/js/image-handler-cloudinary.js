@@ -261,8 +261,8 @@
       const placeholder = document.createElement('div');
       placeholder.className = 'image-card loading-placeholder';
       placeholder.innerHTML = `
-        <div class="image-wrapper" style="display: flex; align-items: center; justify-content: center; background: #f3f4f6;">
-          <div style="text-align: center; color: #6b7280;">
+        <div class="image-wrapper" style="display: flex; align-items: center; justify-content: center; background: var(--color-light-3);">
+          <div style="text-align: center; color: var(--color-dark-3);">
             <i class="fas fa-rotate fa-2x fa-spin"></i>
             <div style="margin-top: 8px; font-size: 12px;">Enviando Layout...</div>
           </div>
@@ -342,3 +342,4 @@
   };
 
 })();
+

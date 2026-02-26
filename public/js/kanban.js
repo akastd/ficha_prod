@@ -33,8 +33,7 @@
     isLoading: false,
     filters: {
       cliente: '',
-      pedido: '',
-      sortDate: 'manual'
+      onlyCurrentWeek: false
     },
     drag: {
       fichaId: null,
@@ -55,7 +54,9 @@
     viewCloseBtn: null,
     viewLoading: null,
     viewLoadingTimeout: null,
-    viewCurrentFichaId: null
+    viewCurrentFichaId: null,
+    previewTooltip: null,
+    previewTooltipImg: null
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -82,14 +83,9 @@
   }
 
   function initEventListeners() {
-    const btnToggleFiltros = document.getElementById('btnToggleFiltrosKanban');
-    const filtrosBody = document.getElementById('kanbanFiltersBody');
-    const filtrosCard = document.querySelector('.kanban-filters-card');
     const filterCliente = document.getElementById('filterClienteKanban');
-    const searchPedido = document.getElementById('searchPedidoKanban');
-    const sortData = document.getElementById('sortDataKanban');
-    const btnLimpar = document.getElementById('btnLimparFiltrosKanban');
     const btnAtualizar = document.getElementById('btnAtualizarKanban');
+    const badgeFiltroSemanaAtual = document.getElementById('badgeFiltroSemanaAtualKanban');
     const kanbanBoard = document.getElementById('kanbanBoard');
     ui.viewModal = document.getElementById('kanbanViewModal');
     ui.viewOverlay = ui.viewModal ? ui.viewModal.querySelector('.kanban-view-modal-overlay') : null;
@@ -98,58 +94,12 @@
     ui.viewCloseBtn = document.getElementById('btnCloseKanbanViewModal');
     ui.viewLoading = document.getElementById('kanbanViewLoading');
 
-    if (btnToggleFiltros && filtrosBody && filtrosCard) {
-      const setAccordionState = expanded => {
-        btnToggleFiltros.setAttribute('aria-expanded', String(expanded));
-        filtrosBody.hidden = !expanded;
-        filtrosCard.classList.toggle('is-expanded', expanded);
-        filtrosCard.classList.toggle('is-collapsed', !expanded);
-      };
-
-      const startsExpanded = btnToggleFiltros.getAttribute('aria-expanded') === 'true' && !filtrosBody.hidden;
-      setAccordionState(startsExpanded);
-
-      btnToggleFiltros.addEventListener('click', () => {
-        const expanded = btnToggleFiltros.getAttribute('aria-expanded') === 'true';
-        setAccordionState(!expanded);
-      });
-    }
-
     if (filterCliente) {
       filterCliente.addEventListener('input', debounce(event => {
         state.filters.cliente = event.target.value || '';
         saveFilters();
         renderKanban();
       }, 180));
-    }
-
-    if (searchPedido) {
-      searchPedido.addEventListener('input', debounce(event => {
-        state.filters.pedido = event.target.value || '';
-        saveFilters();
-        renderKanban();
-      }, 180));
-    }
-
-    if (sortData) {
-      sortData.addEventListener('change', event => {
-        state.filters.sortDate = normalizeSortMode(event.target.value);
-        saveFilters();
-        renderKanban();
-      });
-    }
-
-    if (btnLimpar) {
-      btnLimpar.addEventListener('click', () => {
-        state.filters = {
-          cliente: '',
-          pedido: '',
-          sortDate: 'manual'
-        };
-        hydrateFilterControls();
-        saveFilters();
-        renderKanban();
-      });
     }
 
     if (btnAtualizar) {
@@ -162,8 +112,20 @@
       });
     }
 
+    if (badgeFiltroSemanaAtual) {
+      badgeFiltroSemanaAtual.addEventListener('click', () => {
+        state.filters.onlyCurrentWeek = !state.filters.onlyCurrentWeek;
+        saveFilters();
+        syncCurrentWeekFilterButton();
+        renderKanban();
+      });
+    }
+
     if (kanbanBoard) {
       kanbanBoard.addEventListener('click', handleBoardClick);
+      kanbanBoard.addEventListener('mouseover', handleBoardMouseOver);
+      kanbanBoard.addEventListener('mousemove', handleBoardMouseMove);
+      kanbanBoard.addEventListener('mouseout', handleBoardMouseOut);
       kanbanBoard.addEventListener('dragstart', handleDragStart);
       kanbanBoard.addEventListener('dragend', handleDragEnd);
     }
@@ -262,7 +224,7 @@
 
   function getFichasFiltradas() {
     const clienteTerm = normalizeText(state.filters.cliente);
-    const pedidoTerm = normalizeText(state.filters.pedido);
+    const onlyCurrentWeek = Boolean(state.filters.onlyCurrentWeek);
 
     return state.fichas
       .filter(ficha => {
@@ -270,10 +232,8 @@
         if (statusFicha === 'entregue') return false;
 
         const cliente = normalizeText(ficha.cliente);
-        const pedido = normalizeText(ficha.numero_venda);
-
         if (clienteTerm && !cliente.includes(clienteTerm)) return false;
-        if (pedidoTerm && !pedido.includes(pedidoTerm)) return false;
+        if (onlyCurrentWeek && !isEntregaNaSemanaAtualAteSexta(ficha?.data_entrega)) return false;
         return true;
       });
   }
@@ -283,7 +243,7 @@
   }
 
   function compareFichasWithinColumn(a, b) {
-    const sortMode = normalizeSortMode(state.filters.sortDate);
+    const sortMode = 'manual';
     if (sortMode !== 'manual') {
       const byDate = compareByDatePreference(a, b, sortMode);
       if (byDate !== 0) return byDate;
@@ -413,6 +373,8 @@
       const urgencyClass = entregaInfo.urgencia !== 'default' ? `urgency-${entregaInfo.urgencia}` : '';
       const cardClass = ['kanban-card', isBusy ? 'is-saving' : ''].filter(Boolean).join(' ');
       const bodyClass = ['kanban-card-body', urgencyClass].filter(Boolean).join(' ');
+      const thumbnailSrc = getFichaThumbnailSrc(ficha);
+      const thumbnailAttr = thumbnailSrc ? ` data-thumb-src="${escapeHtml(thumbnailSrc)}"` : '';
       const deliverButton = showDeliverButton
         ? `<button type="button" class="kanban-btn-deliver-icon" data-action="deliver" data-id="${fichaId}" title="Marcar como entregue" aria-label="Marcar ficha #${fichaId} como entregue" ${isBusy ? 'disabled' : ''}>
              <i class="fas fa-check"></i>
@@ -430,7 +392,7 @@
             </span>
             <span class="kanban-card-tools">
               ${deliverButton}
-              <button type="button" class="kanban-btn-view-icon" data-action="view" data-id="${fichaId}" title="Visualizar ficha" aria-label="Visualizar ficha #${fichaId}">
+              <button type="button" class="kanban-btn-view-icon" data-action="view" data-id="${fichaId}" aria-label="Visualizar ficha #${fichaId}"${thumbnailAttr}>
                 <i class="fas fa-eye"></i>
               </button>
             </span>
@@ -465,6 +427,8 @@
   }
 
   async function handleBoardClick(event) {
+    hidePreviewTooltip();
+
     const deliverButton = event.target.closest('button[data-action="deliver"]');
     if (deliverButton) {
       const id = Number(deliverButton.dataset.id);
@@ -480,6 +444,89 @@
     if (!id) return;
 
     openViewModal(id);
+  }
+
+  function handleBoardMouseOver(event) {
+    const viewButton = event.target.closest('button[data-action="view"]');
+    if (!viewButton) return;
+
+    const thumbSrc = String(viewButton.dataset.thumbSrc || '').trim();
+    if (!thumbSrc) return;
+
+    showPreviewTooltip(thumbSrc);
+    positionPreviewTooltip(event.clientX, event.clientY);
+  }
+
+  function handleBoardMouseMove(event) {
+    if (!ui.previewTooltip || ui.previewTooltip.hidden) return;
+    positionPreviewTooltip(event.clientX, event.clientY);
+  }
+
+  function handleBoardMouseOut(event) {
+    const viewButton = event.target.closest('button[data-action="view"]');
+    if (!viewButton) return;
+
+    const nextTarget = event.relatedTarget;
+    if (nextTarget && viewButton.contains(nextTarget)) return;
+
+    hidePreviewTooltip();
+  }
+
+  function ensurePreviewTooltip() {
+    if (ui.previewTooltip && ui.previewTooltipImg) return;
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'kanban-image-tooltip';
+    tooltip.hidden = true;
+
+    const img = document.createElement('img');
+    img.alt = 'Preview da ficha';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+
+    tooltip.appendChild(img);
+    document.body.appendChild(tooltip);
+
+    ui.previewTooltip = tooltip;
+    ui.previewTooltipImg = img;
+  }
+
+  function showPreviewTooltip(src) {
+    ensurePreviewTooltip();
+    if (!ui.previewTooltip || !ui.previewTooltipImg) return;
+
+    if (ui.previewTooltipImg.getAttribute('src') !== src) {
+      ui.previewTooltipImg.setAttribute('src', src);
+    }
+    ui.previewTooltip.hidden = false;
+  }
+
+  function hidePreviewTooltip() {
+    if (!ui.previewTooltip) return;
+    ui.previewTooltip.hidden = true;
+  }
+
+  function positionPreviewTooltip(clientX, clientY) {
+    if (!ui.previewTooltip || ui.previewTooltip.hidden) return;
+
+    const offset = 14;
+    const margin = 8;
+    const rect = ui.previewTooltip.getBoundingClientRect();
+    let left = clientX + offset;
+    let top = clientY + offset;
+
+    if (left + rect.width > window.innerWidth - margin) {
+      left = clientX - rect.width - offset;
+    }
+    if (top + rect.height > window.innerHeight - margin) {
+      top = clientY - rect.height - offset;
+    }
+
+    if (left < margin) left = margin;
+    if (top < margin) top = margin;
+
+    ui.previewTooltip.style.left = `${Math.round(left)}px`;
+    ui.previewTooltip.style.top = `${Math.round(top)}px`;
   }
 
   async function handleDeliverClick(fichaId) {
@@ -968,16 +1015,15 @@
   function loadFilters() {
     try {
       const raw = localStorage.getItem(STORAGE_FILTER_KEY);
-      if (!raw) return { cliente: '', pedido: '', sortDate: 'manual' };
+      if (!raw) return { cliente: '', onlyCurrentWeek: false };
 
       const parsed = JSON.parse(raw);
       return {
         cliente: typeof parsed.cliente === 'string' ? parsed.cliente : '',
-        pedido: typeof parsed.pedido === 'string' ? parsed.pedido : '',
-        sortDate: 'manual'
+        onlyCurrentWeek: parsed.onlyCurrentWeek === true
       };
     } catch (_) {
-      return { cliente: '', pedido: '', sortDate: 'manual' };
+      return { cliente: '', onlyCurrentWeek: false };
     }
   }
 
@@ -987,12 +1033,38 @@
 
   function hydrateFilterControls() {
     const filterCliente = document.getElementById('filterClienteKanban');
-    const searchPedido = document.getElementById('searchPedidoKanban');
-    const sortData = document.getElementById('sortDataKanban');
 
     if (filterCliente) filterCliente.value = state.filters.cliente;
-    if (searchPedido) searchPedido.value = state.filters.pedido;
-    if (sortData) sortData.value = state.filters.sortDate;
+    syncCurrentWeekFilterButton();
+  }
+
+  function syncCurrentWeekFilterButton() {
+    const badge = document.getElementById('badgeFiltroSemanaAtualKanban');
+    if (!badge) return;
+
+    const isActive = Boolean(state.filters.onlyCurrentWeek);
+    badge.classList.toggle('is-active', isActive);
+    badge.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  }
+
+  function isEntregaNaSemanaAtualAteSexta(rawDate) {
+    const entrega = parseIsoDate(rawDate);
+    if (!entrega) return false;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayOfWeek = today.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    friday.setHours(23, 59, 59, 999);
+
+    return entrega.getTime() >= monday.getTime() && entrega.getTime() <= friday.getTime();
   }
 
   function getDisplayDate(ficha) {
@@ -1146,6 +1218,57 @@
       .trim();
 
     return normalized === 'sim' || normalized === 'true' || normalized === '1';
+  }
+
+  function getFichaThumbnailSrc(ficha) {
+    if (!ficha || typeof ficha !== 'object') return '';
+
+    const directList = Array.isArray(ficha.imagens) ? ficha.imagens : [];
+    const fromDirect = getFirstImageSrcFromArray(directList);
+    if (fromDirect) return fromDirect;
+
+    const imagensDataRaw = ficha.imagens_data ?? ficha.imagensData;
+    const parsedList = parseImagesValue(imagensDataRaw);
+    const fromParsed = getFirstImageSrcFromArray(parsedList);
+    if (fromParsed) return fromParsed;
+
+    const single = String(ficha.imagem_data ?? ficha.imagemData ?? '').trim();
+    return single || '';
+  }
+
+  function parseImagesValue(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string') return [];
+
+    const text = value.trim();
+    if (!text) return [];
+
+    try {
+      const parsed = JSON.parse(text);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function getFirstImageSrcFromArray(items) {
+    if (!Array.isArray(items) || items.length === 0) return '';
+
+    for (let i = 0; i < items.length; i += 1) {
+      const current = items[i];
+      if (typeof current === 'string') {
+        const srcFromString = current.trim();
+        if (srcFromString) return srcFromString;
+        continue;
+      }
+
+      if (current && typeof current === 'object') {
+        const src = String(current.src || '').trim();
+        if (src) return src;
+      }
+    }
+
+    return '';
   }
 
   function debounce(fn, delay) {

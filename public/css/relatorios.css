@@ -3,55 +3,55 @@
 /* ==================== VARIÁVEIS DE CORES ==================== */
 :root {
   /* Cores Base */
-  --rel-primary: #111827;
-  --rel-secondary: #2563eb;
-  --rel-text: #111827;
-  --rel-text-soft: #6b7280;
-  --rel-border: #e5e7eb;
-  --rel-bg: #f9fafb;
-  --rel-bg-hover: #f3f4f6;
-  --rel-white: #ffffff;
+  --rel-primary: var(--color-dark-1);
+  --rel-secondary: var(--color-primary-main);
+  --rel-text: var(--color-dark-1);
+  --rel-text-soft: var(--color-dark-2);
+  --rel-border: var(--color-light-1);
+  --rel-bg: var(--color-light-4);
+  --rel-bg-hover: var(--color-light-3);
+  --rel-white: var(--color-white);
 
   /* Cores de Status */
-  --rel-success: #10b981;
-  --rel-success-light: #d1fae5;
-  --rel-success-dark: #059669;
+  --rel-success: var(--color-success);
+  --rel-success-light: var(--color-success-soft);
+  --rel-success-dark: var(--color-success-dark);
 
-  --rel-warning: #f59e0b;
-  --rel-warning-light: #fef3c7;
-  --rel-warning-dark: #d97706;
+  --rel-warning: var(--color-warning);
+  --rel-warning-light: var(--color-warning-soft);
+  --rel-warning-dark: var(--color-warning-dark);
 
-  --rel-danger: #ef4444;
-  --rel-danger-light: #fee2e2;
-  --rel-danger-dark: #dc2626;
+  --rel-danger: var(--color-danger);
+  --rel-danger-light: var(--color-danger-soft);
+  --rel-danger-dark: var(--color-danger-dark);
 
-  --rel-info: #3b82f6;
-  --rel-info-light: #dbeafe;
-  --rel-info-dark: #2563eb;
+  --rel-info: var(--color-primary-main);
+  --rel-info-light: var(--color-primary-subtle);
+  --rel-info-dark: var(--color-primary-darker);
 
-  --rel-purple: #8b5cf6;
-  --rel-purple-light: #ede9fe;
-  --rel-purple-dark: #7c3aed;
+  --rel-purple: #8B5CF6;
+  --rel-purple-light: #EDE9FE;
+  --rel-purple-dark: #7C3AED;
 
   /* Medalhas */
-  --rel-gold: #f59e0b;
-  --rel-gold-dark: #d97706;
-  --rel-silver: #9ca3af;
-  --rel-silver-dark: #6b7280;
-  --rel-bronze: #fb923c;
-  --rel-bronze-dark: #ea580c;
+  --rel-gold: var(--color-warning);
+  --rel-gold-dark: var(--color-warning-dark);
+  --rel-silver: var(--color-dark-4);
+  --rel-silver-dark: var(--color-dark-2);
+  --rel-bronze: var(--color-bronze);
+  --rel-bronze-dark: var(--color-bronze-dark);
 
   /* Espaçamentos */
-  --rel-gap-sm: 8px;
-  --rel-gap-md: 12px;
-  --rel-gap-lg: 16px;
-  --rel-gap-xl: 20px;
-  --rel-gap-xxl: 24px;
+  --rel-gap-sm: var(--space-8);
+  --rel-gap-md: var(--space-12);
+  --rel-gap-lg: var(--space-16);
+  --rel-gap-xl: var(--space-20);
+  --rel-gap-xxl: var(--space-24);
 
   /* Border Radius */
-  --rel-radius-sm: 8px;
-  --rel-radius-md: 12px;
-  --rel-radius-lg: 16px;
+  --rel-radius-sm: var(--radius-md);
+  --rel-radius-md: var(--radius-xl);
+  --rel-radius-lg: var(--radius-3xl);
   --rel-radius-full: 50%;
 }
 
@@ -155,7 +155,7 @@
 .stat-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
   margin-bottom: var(--rel-gap-lg);
   color: var(--rel-text-soft);
   font-size: 0.9rem;
@@ -193,7 +193,7 @@
   gap: var(--rel-gap-xl);
   padding: var(--rel-gap-xl);
   background: linear-gradient(135deg, var(--rel-info-dark) 0%, var(--rel-info) 100%);
-  border-radius: 14px;
+  border-radius: var(--radius-2xl);
 }
 
 .vendedor-icon {
@@ -207,7 +207,7 @@
   font-size: 2rem;
   color: var(--rel-warning-dark);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .vendedor-info {
@@ -218,7 +218,7 @@
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--rel-info-light);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-4);
 }
 
 .vendedor-stats {
@@ -242,7 +242,7 @@
 .equipe-resumo-label {
   font-size: 0.82rem;
   color: var(--rel-text-soft);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 
 .equipe-resumo-value {
@@ -368,14 +368,14 @@
 .relatorio-vendedores-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .vendedores-report-header,
 .vendedores-report-row {
   display: grid;
   grid-template-columns: 2fr repeat(5, minmax(70px, 1fr));
-  gap: 10px;
+  gap: var(--space-10);
   align-items: center;
 }
 
@@ -404,7 +404,7 @@
 }
 
 .vendedores-report-row:nth-child(odd) {
-  background: #f8fafc;
+  background: var(--color-light-4);
 }
 
 .vendedores-report-name {
@@ -430,15 +430,15 @@
 
 /* Top 3 - Medalhas */
 .ranking-item.top-1 {
-  background: linear-gradient(135deg, var(--rel-warning-light) 0%, #fde68a 100%);
+  background: linear-gradient(135deg, var(--rel-warning-light) 0%, var(--color-warning) 100%);
 }
 
 .ranking-item.top-2 {
-  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  background: linear-gradient(135deg, var(--color-light-1) 0%, var(--color-light-1) 100%);
 }
 
 .ranking-item.top-3 {
-  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+  background: linear-gradient(135deg, var(--color-warning) 0%, var(--color-warning) 100%);
 }
 
 .ranking-position {
@@ -496,7 +496,7 @@
 /* Badges de Taxa */
 .ranking-badge {
   padding: 4px 10px;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -520,7 +520,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--rel-gap-md);
-  margin-bottom: 10px;
+  margin-bottom: var(--space-10);
   font-size: 0.8rem;
   color: var(--rel-text-soft);
 }
@@ -539,14 +539,14 @@
 .ranking-bar {
   height: 6px;
   background: var(--rel-border);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
 .ranking-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--rel-secondary), #60a5fa);
-  border-radius: 3px;
+  background: linear-gradient(90deg, var(--rel-secondary), var(--color-primary-lighter));
+  border-radius: var(--radius-xs);
   transition: width 0.5s ease;
 }
 
@@ -624,7 +624,7 @@
 .tamanhos-horizontal-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .tamanho-horizontal-item {
@@ -638,8 +638,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
 .tamanho-horizontal-label {
@@ -657,21 +657,21 @@
 .tamanho-horizontal-track {
   width: 100%;
   height: 10px;
-  background: #e5e7eb;
-  border-radius: 999px;
+  background: var(--color-light-1);
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
 .tamanho-horizontal-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--rel-info), #60a5fa);
-  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rel-info), var(--color-primary-lighter));
+  border-radius: var(--radius-pill);
 }
 
 .materiais-horizontal-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 #materiaisContainer {
@@ -692,8 +692,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
 .material-horizontal-label {
@@ -712,24 +712,24 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
   font-size: 0.8rem;
   color: var(--rel-text-soft);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 
 .material-horizontal-track {
   width: 100%;
   height: 10px;
-  background: #e5e7eb;
-  border-radius: 999px;
+  background: var(--color-light-1);
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
 .material-horizontal-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--rel-success), #34d399);
-  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rel-success), var(--color-success));
+  border-radius: var(--radius-pill);
 }
 
 .tamanho-bar-container {
@@ -745,8 +745,8 @@
 .tamanho-bar {
   width: 100%;
   min-width: 30px;
-  background: linear-gradient(180deg, var(--rel-info) 0%, #60a5fa 100%);
-  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, var(--rel-info) 0%, var(--color-primary-lighter) 100%);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   position: relative;
   transition: height 0.5s ease;
   display: flex;
@@ -759,7 +759,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--rel-primary);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  text-shadow: var(--shadow-text-soft);
   position: absolute;
   bottom: -20px;
 }
@@ -801,7 +801,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space-10);
   margin-bottom: var(--rel-gap-sm);
 }
 
@@ -837,7 +837,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   padding: 4px 10px;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   display: inline-block;
 }
 
@@ -868,7 +868,7 @@
 .chart-container {
   position: relative;
   height: 300px;
-  padding: 10px;
+  padding: var(--space-10);
 }
 
 /* ==================== RESPONSIVO ==================== */
@@ -906,7 +906,7 @@
   .ranking-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: var(--space-6);
   }
 
   .ranking-stats {
@@ -923,7 +923,7 @@
 
   .vendedores-report-row {
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: var(--space-8);
   }
 
   .vendedores-report-name {
@@ -931,7 +931,7 @@
   }
 
   .tamanhos-bars {
-    gap: 6px;
+    gap: var(--space-6);
   }
 
   .tamanho-bar-container {
@@ -955,7 +955,7 @@
 
   .filter-select {
     min-width: 100%;
-    margin-top: 10px;
+    margin-top: var(--space-10);
   }
 
   .card-header {
@@ -965,7 +965,7 @@
   .card-header-actions {
     width: 100%;
     margin-left: 0;
-    margin-top: 10px;
+    margin-top: var(--space-10);
   }
 
   .comparativo-grid {
@@ -994,51 +994,51 @@
 
 /* ==================== IMPRESSÃO ==================== */
 html[data-theme='dark'] {
-  --rel-primary: #e5e7eb;
-  --rel-secondary: #60a5fa;
-  --rel-text: #e5e7eb;
-  --rel-text-soft: #94a3b8;
-  --rel-border: #334155;
-  --rel-bg: #111827;
-  --rel-bg-hover: #1e293b;
-  --rel-white: #0f172a;
-  --rel-info-light: #1e3a8a;
-  --rel-success-light: #064e3b;
-  --rel-warning-light: #78350f;
-  --rel-danger-light: #7f1d1d;
-  --rel-purple-light: #312e81;
+  --rel-primary: var(--color-light-1);
+  --rel-secondary: #60A5FA;
+  --rel-text: var(--color-light-1);
+  --rel-text-soft: var(--color-dark-4);
+  --rel-border: var(--color-dark-2);
+  --rel-bg: var(--color-dark-1);
+  --rel-bg-hover: var(--color-dark-2);
+  --rel-white: var(--color-dark-1);
+  --rel-info-light: #1E3A8A;
+  --rel-success-light: #064E3B;
+  --rel-warning-light: #78350F;
+  --rel-danger-light: #7F1D1D;
+  --rel-purple-light: #312E81;
 }
 
 html[data-theme='dark'] .vendedores-report-row:nth-child(odd) {
-  background: #172033;
+  background: var(--color-dark-2);
 }
 
 html[data-theme='dark'] .ranking-item.top-1 {
-  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  background: linear-gradient(135deg, var(--color-dark-2) 0%, var(--color-warning-dark) 100%);
 }
 
 html[data-theme='dark'] .ranking-item.top-2 {
-  background: linear-gradient(135deg, #334155 0%, #475569 100%);
+  background: linear-gradient(135deg, var(--color-dark-2) 0%, var(--color-dark-2) 100%);
 }
 
 html[data-theme='dark'] .ranking-item.top-3 {
-  background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+  background: linear-gradient(135deg, var(--color-dark-2) 0%, var(--color-bronze-dark) 100%);
 }
 
 html[data-theme='dark'] .top-vendedor {
-  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #475569 0%, #273449 100%);
 }
 
 html[data-theme='dark'] .filter-select {
-  background: #0f172a;
-  color: #e5e7eb;
-  border-color: #334155;
+  background: var(--color-dark-1);
+  color: var(--color-light-1);
+  border-color: var(--color-dark-2);
   color-scheme: dark;
 }
 
 html[data-theme='dark'] .filter-select option {
-  background: #0f172a;
-  color: #e5e7eb;
+  background: var(--color-dark-1);
+  color: var(--color-light-1);
 }
 
 @media print {
@@ -1067,3 +1067,13 @@ html[data-theme='dark'] .filter-select option {
     print-color-adjust: exact;
   }
 }
+
+
+
+
+
+
+
+
+
+

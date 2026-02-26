@@ -1665,6 +1665,9 @@
         try {
           const ficha = JSON.parse(ev.target.result);
           preencherFicha(ficha);
+          if (typeof window.atualizarDataInicioDeTemplate === 'function') {
+            window.atualizarDataInicioDeTemplate();
+          }
         } catch (err) {
           alert('Erro ao ler arquivo JSON.');
         }
@@ -1676,6 +1679,20 @@
   }
 
   window.carregarFichaDeArquivo = carregarFichaDeArquivo;
+
+  function atualizarDataInicioDeTemplate() {
+    const dataInicioEl = document.getElementById('dataInicio');
+    if (dataInicioEl) {
+      const hoje = new Date();
+      const ano = hoje.getFullYear();
+      const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+      const dia = String(hoje.getDate()).padStart(2, '0');
+      dataInicioEl.value = `${ano}-${mes}-${dia}`;
+      dataInicioEl.dispatchEvent(new Event('change'));
+    }
+  }
+
+  window.atualizarDataInicioDeTemplate = atualizarDataInicioDeTemplate;
 
   function preencherFicha(ficha) {
     if (!ficha) return;
@@ -1950,7 +1967,7 @@
       if (el) {
         const text = val || fallback;
         if (shouldHighlight && text) {
-          el.innerHTML = `<mark>${text}</mark>`;
+          el.innerHTML = `${text}`;
         } else {
           el.textContent = text;
         }
@@ -2025,7 +2042,7 @@
     const eventoEl = document.getElementById('print-evento');
     if (eventoEl) {
       if (isEvento) {
-        eventoEl.innerHTML = '<span style="color: #dc2626; font-weight: bold;">★ Sim ★</span>';
+        eventoEl.innerHTML = '<span style="color: var(--color-danger-dark); font-weight: 700;">EVENTO</span>';
       } else {
         eventoEl.textContent = 'Não';
       }

@@ -2,10 +2,29 @@
   'use strict';
 
   let editor = null;
-  let currentColor = '#000000';
+  let currentColor = '';
   let safeUndoHtml = null;
   let lastSafeAutoFillHtml = null;
   let pendingSafeUndo = false;
+  const RTE_SWATCHES = [
+    { token: '--color-dark-1', title: 'Preto' },
+    { token: '--color-danger', title: 'Vermelho' },
+    { token: '--color-warning', title: 'Laranja' },
+    { token: '--color-warning', title: 'Amarelo Escuro' },
+    { token: '--color-success', title: 'Verde' },
+    { token: '--color-primary-main', title: 'Ciano' },
+    { token: '--color-primary-main', title: 'Azul' },
+    { token: '--color-primary-darker', title: 'Roxo' },
+    { token: '--color-danger', title: 'Magenta' },
+    { token: '--color-danger', title: 'Rosa' },
+    { token: '--color-dark-3', title: 'Cinza' },
+    { token: '--color-white', title: 'Branco', borderToken: '--color-light-1' }
+  ];
+
+  function getCssVar(token, fallback = '') {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return value || fallback;
+  }
 
   function initRichTextEditor() {
     const observacoesContainer = document.querySelector('.form-group:has(#observacoes)');
@@ -18,6 +37,7 @@
     const oldContent = oldTextarea.value;
 
     // Criar estrutura do editor
+    currentColor = getCssVar('--color-dark-1', getCssVar('--color-dark-1', 'black'));
     const wrapper = document.createElement('div');
     wrapper.className = 'rich-text-wrapper';
     wrapper.innerHTML = `
@@ -50,27 +70,14 @@
                   <i class="fas fa-times"></i>
                 </button>
               </div>
-              <div class="color-palette-grid">
-                <button type="button" class="color-swatch" data-color="#000000" style="background: #000000" title="Preto"></button>
-                <button type="button" class="color-swatch" data-color="#dc2626" style="background: #dc2626" title="Vermelho"></button>
-                <button type="button" class="color-swatch" data-color="#ea580c" style="background: #ea580c" title="Laranja"></button>
-                <button type="button" class="color-swatch" data-color="#ca8a04" style="background: #ca8a04" title="Amarelo Escuro"></button>
-                <button type="button" class="color-swatch" data-color="#16a34a" style="background: #16a34a" title="Verde"></button>
-                <button type="button" class="color-swatch" data-color="#0891b2" style="background: #0891b2" title="Ciano"></button>
-                <button type="button" class="color-swatch" data-color="#2563eb" style="background: #2563eb" title="Azul"></button>
-                <button type="button" class="color-swatch" data-color="#7c3aed" style="background: #7c3aed" title="Roxo"></button>
-                <button type="button" class="color-swatch" data-color="#c026d3" style="background: #c026d3" title="Magenta"></button>
-                <button type="button" class="color-swatch" data-color="#db2777" style="background: #db2777" title="Rosa"></button>
-                <button type="button" class="color-swatch" data-color="#475569" style="background: #475569" title="Cinza"></button>
-                <button type="button" class="color-swatch" data-color="#ffffff" style="background: #ffffff; border: 1px solid #e5e7eb" title="Branco"></button>
-              </div>
+              <div class="color-palette-grid" id="colorPaletteGrid"></div>
               <div class="color-palette-divider"></div>
               <div class="color-palette-custom">
                 <label for="textColorPicker" class="custom-color-label">
                   <i class="fas fa-eye-dropper"></i>
                   Cor personalizada
                 </label>
-                <input type="color" class="color-picker-input" id="textColorPicker" value="#000000">
+                <input type="color" class="color-picker-input" id="textColorPicker" value="${currentColor}">
               </div>
             </div>
           </div>
@@ -115,6 +122,27 @@
     const colorIndicator = document.getElementById('colorIndicator');
     const colorPickerBtn = document.getElementById('colorPickerBtn');
     const colorPaletteDropdown = document.getElementById('colorPaletteDropdown');
+    const colorPaletteGrid = document.getElementById('colorPaletteGrid');
+    colorIndicator.style.backgroundColor = currentColor;
+    colorPicker.value = currentColor;
+
+    if (colorPaletteGrid) {
+      colorPaletteGrid.innerHTML = '';
+      RTE_SWATCHES.forEach((swatchDef) => {
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'color-swatch';
+        swatch.title = swatchDef.title;
+        swatch.dataset.token = swatchDef.token;
+        const resolvedColor = getCssVar(swatchDef.token, getCssVar('--color-dark-1', 'black'));
+        swatch.dataset.color = resolvedColor;
+        swatch.style.background = `var(${swatchDef.token})`;
+        if (swatchDef.borderToken) {
+          swatch.style.borderColor = `var(${swatchDef.borderToken})`;
+        }
+        colorPaletteGrid.appendChild(swatch);
+      });
+    }
 
     // Se havia conteúdo antigo em texto puro, converter
     if (oldContent) {
@@ -170,7 +198,8 @@
       swatch.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const color = swatch.dataset.color;
+        const token = swatch.dataset.token;
+        const color = token ? getCssVar(token, swatch.dataset.color || getCssVar('--color-dark-1', 'black')) : swatch.dataset.color;
         currentColor = color;
         colorIndicator.style.backgroundColor = color;
         colorPicker.value = color;
@@ -411,3 +440,4 @@
   }
 
 })();
+

@@ -10,6 +10,11 @@
   let dadosMateriais = [];
   let catalogoTamanhos = null;
   let catalogoRotulosTamanhos = null;
+
+  function getCssVar(token, fallback = '') {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return value || fallback;
+  }
   // Regras de equivalencia de tamanhos (canônico -> variações equivalentes).
   // Exemplo: EG (54) absorve XGG (54) e aparece apenas como EG (54) no relatório.
   const REGRAS_EQUIVALENCIA_TAMANHOS = Object.freeze([
@@ -303,11 +308,11 @@
       circle.style.strokeDashoffset = offset;
 
       if (taxa >= 80) {
-        circle.style.stroke = '#10b981';
+        circle.style.stroke = getCssVar('--color-success', getCssVar('--color-success', 'green'));
       } else if (taxa >= 50) {
-        circle.style.stroke = '#f59e0b';
+        circle.style.stroke = getCssVar('--color-warning', getCssVar('--color-warning', 'orange'));
       } else {
-        circle.style.stroke = '#ef4444';
+        circle.style.stroke = getCssVar('--color-danger', getCssVar('--color-danger', 'red'));
       }
     }
   }
@@ -737,6 +742,18 @@
     const pendentes = relatorioAtual.fichasPendentes || 0;
     const total = entregues + pendentes;
     const taxa = total > 0 ? Math.min(100, Math.round((entregues / total) * 100)) : 0;
+    const printBodyColor = getCssVar('--color-report-body', getCssVar('--color-dark-1', 'black'));
+    const printHeadingColor = getCssVar('--color-report-heading', getCssVar('--color-dark-1', 'black'));
+    const printMutedColor = getCssVar('--color-report-muted', getCssVar('--color-dark-2', 'gray'));
+    const printBorderColor = getCssVar('--color-light-1', getCssVar('--color-light-1', 'lightgray'));
+    const printInfoBg = getCssVar('--color-neutral-50', getCssVar('--color-light-4', 'whitesmoke'));
+    const printPrimary = getCssVar('--color-primary-main', getCssVar('--color-primary-main', 'steelblue'));
+    const printPrimaryDark = getCssVar('--color-primary-darker', getCssVar('--color-primary-darker', 'slateblue'));
+    const printSuccess = getCssVar('--color-success', getCssVar('--color-success', 'green'));
+    const printWarning = getCssVar('--color-warning', getCssVar('--color-warning', 'orange'));
+    const printDanger = getCssVar('--color-danger', getCssVar('--color-danger', 'red'));
+    const taxaColor = taxa >= 80 ? printSuccess : taxa >= 50 ? printWarning : printDanger;
+    const printFont = getCssVar('--font-family-base', 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif');
 
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -747,30 +764,30 @@
     <title>Relatório de Produção - ${periodo}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1f2937; line-height: 1.6; }
-        .header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
-        .header h1 { font-size: 28px; color: #1e40af; margin-bottom: 8px; }
-        .header .periodo { font-size: 18px; color: #6b7280; }
-        .header .data-geracao { font-size: 12px; color: #9ca3af; margin-top: 8px; }
+        body { font-family: ${printFont}; padding: 40px; color: ${printBodyColor}; line-height: 1.6; }
+        .header { text-align: center; border-bottom: 3px solid ${printPrimary}; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; color: ${printPrimaryDark}; margin-bottom: 8px; }
+        .header .periodo { font-size: 18px; color: ${printMutedColor}; }
+        .header .data-geracao { font-size: 12px; color: ${printMutedColor}; margin-top: 8px; }
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center; }
-        .stat-card.green { border-left: 5px solid #10b981; }
-        .stat-card.orange { border-left: 5px solid #f59e0b; }
-        .stat-card.blue { border-left: 5px solid #3b82f6; }
-        .stat-card.purple { border-left: 5px solid #8b5cf6; }
-        .stat-card .label { font-size: 14px; color: #6b7280; margin-bottom: 8px; }
-        .stat-card .value { font-size: 36px; font-weight: 700; color: #1f2937; }
+        .stat-card { border: 2px solid ${printBorderColor}; border-radius: 12px; padding: 20px; text-align: center; }
+        .stat-card.green { border-left: 5px solid ${printSuccess}; }
+        .stat-card.orange { border-left: 5px solid ${printWarning}; }
+        .stat-card.blue { border-left: 5px solid ${printPrimary}; }
+        .stat-card.purple { border-left: 5px solid ${printPrimaryDark}; }
+        .stat-card .label { font-size: 14px; color: ${printMutedColor}; margin-bottom: 8px; }
+        .stat-card .value { font-size: 36px; font-weight: 700; color: ${printHeadingColor}; }
         .section { margin-bottom: 30px; }
-        .section-title { font-size: 18px; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 15px; }
+        .section-title { font-size: 18px; font-weight: 600; color: ${printHeadingColor}; border-bottom: 2px solid ${printBorderColor}; padding-bottom: 10px; margin-bottom: 15px; }
         .two-columns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-        .info-box { background: #f9fafb; border-radius: 10px; padding: 20px; }
-        .info-box .title { font-size: 14px; color: #6b7280; margin-bottom: 10px; }
-        .info-box .content { font-size: 20px; font-weight: 600; color: #1f2937; }
-        .info-box .subtitle { font-size: 14px; color: #9ca3af; }
+        .info-box { background: ${printInfoBg}; border-radius: 10px; padding: 20px; }
+        .info-box .title { font-size: 14px; color: ${printMutedColor}; margin-bottom: 10px; }
+        .info-box .content { font-size: 20px; font-weight: 600; color: ${printHeadingColor}; }
+        .info-box .subtitle { font-size: 14px; color: ${printMutedColor}; }
         .taxa-box { text-align: center; }
-        .taxa-valor { font-size: 48px; font-weight: 700; color: ${taxa >= 80 ? '#10b981' : taxa >= 50 ? '#f59e0b' : '#ef4444'}; }
-        .taxa-legenda { color: #6b7280; font-size: 14px; }
-        .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+        .taxa-valor { font-size: 48px; font-weight: 700; color: ${taxaColor}; }
+        .taxa-legenda { color: ${printMutedColor}; font-size: 14px; }
+        .footer { margin-top: 40px; text-align: center; font-size: 12px; color: ${printMutedColor}; border-top: 1px solid ${printBorderColor}; padding-top: 20px; }
         @media print { body { padding: 20px; } .stat-card { break-inside: avoid; } }
     </style>
 </head>
@@ -1500,5 +1517,6 @@
     }
   }
 })();
+
 
 

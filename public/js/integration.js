@@ -64,6 +64,32 @@
   };
 
   const COM_NOMES_VALOR_NENHUM = '0';
+  const TEMPLATE_FILES = Object.freeze([
+    'camiseta_mc_gr.json',
+    'camiseta_ml_gr.json',
+    'camiseta_mc_gv.json',
+    'camiseta_ml_gv.json',
+    'baby_mc_gr.json',
+    'baby_ml_gr.json',
+    'baby_mc_gv.json',
+    'baby_ml_gv.json',
+    'camiseta_mc_gp.json',
+    'camiseta_ml_gp.json',
+    'camisa_masc_mc.json',
+    'camisa_masc_ml.json',
+    'baby_mc_gp.json',
+    'baby_ml_gp.json',
+    'camisa_fem_mc.json',
+    'camisa_fem_ml.json'
+  ]);
+  const TEMPLATE_LABELS_GOLA = Object.freeze({
+    polo: 'Gola Polo',
+    social: 'Gola Social',
+    redonda: 'Gola Redonda',
+    v: 'Gola V',
+    v_polo: 'Gola V Polo'
+  });
+  let templateLoaderState = null;
 
   function normalizarComNomesValor(valor) {
     if (valor === true) return '1';
@@ -141,7 +167,7 @@
       if (!modoVisualizacao) {
         configurarBotoesAcao();
       }
-    } catch (error) {}
+    } catch (error) { }
   }
 
   async function initClienteAutocomplete() {
@@ -308,6 +334,11 @@
         if (botaoDef.alinharDireita) btn.style.marginLeft = 'auto';
         container.appendChild(btn);
       });
+
+      if (container === containerTopo && !modoVisualizacao) {
+        const btnTemplate = criarBotaoCarregarTemplate();
+        container.appendChild(btnTemplate);
+      }
     });
   }
 
@@ -319,6 +350,176 @@
     btn.innerHTML = `<i class="fas ${icone}"></i><span>${texto}</span>`;
     btn.addEventListener('click', onClick);
     return btn;
+  }
+
+  function obterLabelGola(valorGola) {
+    const valor = String(valorGola || '').trim().toLowerCase();
+    if (!valor) return 'Gola não definida';
+    return TEMPLATE_LABELS_GOLA[valor] || `Gola ${valor}`;
+  }
+
+  function obterTituloTemplate(templateData, fileName) {
+    const produto =
+      templateData?.produtos?.[0]?.produto ||
+      templateData?.produtos?.[0]?.descricao ||
+      fileName.replace('.json', '').replace(/_/g, ' ');
+    return `${produto} | ${obterLabelGola(templateData?.gola)}`;
+  }
+
+  function gerarImagemTemplateHtml(fileName) {
+    const imageName = fileName.replace('.json', '.svg');
+    const imagePath = `img/template/${imageName}`;
+    return `<img src="${imagePath}" class="template-card-img" alt="Template" onerror="this.onerror=null; this.outerHTML='<i class=\\\'fas fa-tshirt template-fallback-icon\\\'></i>';">`;
+  }
+
+  function normalizarTemplateParaFormulario(templateData) {
+    const dados = JSON.parse(JSON.stringify(templateData || {}));
+    if (dados.imagens && !dados.imagensData) {
+      dados.imagensData = JSON.stringify(dados.imagens);
+    }
+    if (!dados.imagensData) {
+      dados.imagensData = '[]';
+    }
+    return dados;
+  }
+
+  async function carregarTemplatesDisponiveis() {
+    const templates = [];
+
+    for (const fileName of TEMPLATE_FILES) {
+      const response = await fetch(`data/templates/${fileName}`, { cache: 'no-cache' });
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      templates.push({
+        fileName,
+        data,
+        title: obterTituloTemplate(data, fileName),
+        golaLabel: obterLabelGola(data?.gola),
+        svg: gerarImagemTemplateHtml(fileName)
+      });
+    }
+
+    return templates;
+  }
+
+  function fecharTooltipTemplate() {
+    if (!templateLoaderState) return;
+    templateLoaderState.tooltip.classList.remove('is-open');
+    templateLoaderState.button.setAttribute('aria-expanded', 'false');
+  }
+
+  function abrirTooltipTemplate() {
+    if (!templateLoaderState) return;
+    templateLoaderState.tooltip.classList.add('is-open');
+    templateLoaderState.button.setAttribute('aria-expanded', 'true');
+  }
+
+  function criarBotaoCarregarTemplate() {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'template-loader';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-secondary';
+    button.id = 'btnCarregarTemplate';
+    button.innerHTML = '<i class="fas fa-layer-group"></i><span>Carregar template</span>';
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-haspopup', 'dialog');
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'template-tooltip';
+    tooltip.innerHTML = `
+      <div class="template-tooltip-header">
+        <strong>Templates prontos</strong>
+        <span>Escolha para preencher o formulário</span>
+      </div>
+      <div class="template-tooltip-content"></div>
+    `;
+
+    wrapper.appendChild(button);
+    wrapper.appendChild(tooltip);
+
+    templateLoaderState = {
+      wrapper,
+      button,
+      tooltip,
+      carregado: false
+    };
+
+    button.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      const aberto = tooltip.classList.contains('is-open');
+      if (aberto) {
+        fecharTooltipTemplate();
+        return;
+      }
+
+      abrirTooltipTemplate();
+
+      if (templateLoaderState.carregado) return;
+
+      const content = tooltip.querySelector('.template-tooltip-content');
+      if (!content) return;
+
+      content.innerHTML = `<div class="template-loader-status">
+          <i class="fas fa-spinner fa-spin"></i>
+          Carregando templates...
+        </div>`;
+
+      try {
+        const templates = await carregarTemplatesDisponiveis();
+        content.innerHTML = '';
+
+        if (!templates.length) {
+          content.innerHTML = '<div class="template-loader-status">Nenhum template encontrado.</div>';
+          templateLoaderState.carregado = true;
+          return;
+        }
+
+        templates.forEach(template => {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'template-card';
+          card.innerHTML = `
+            <div class="template-card-preview">${template.svg}</div>
+            <div class="template-card-title">${template.title}</div>
+          `;
+
+          card.addEventListener('click', () => {
+            const dados = normalizarTemplateParaFormulario(template.data);
+            preencherFormulario(dados);
+            if (typeof window.atualizarDataInicioDeTemplate === 'function') {
+              window.atualizarDataInicioDeTemplate();
+            }
+            fecharTooltipTemplate();
+            mostrarToast(`Template "${template.title}" carregado.`, 'success');
+          });
+
+          content.appendChild(card);
+        });
+
+        templateLoaderState.carregado = true;
+      } catch (error) {
+        content.innerHTML = '<div class="template-loader-status">Erro ao carregar templates.</div>';
+      }
+    });
+
+    if (!window.__templateTooltipClickHandler) {
+      window.__templateTooltipClickHandler = true;
+
+      document.addEventListener('click', (event) => {
+        if (!templateLoaderState) return;
+        if (templateLoaderState.wrapper.contains(event.target)) return;
+        fecharTooltipTemplate();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') fecharTooltipTemplate();
+      });
+    }
+
+    return wrapper;
   }
 
   function textoSemHtml(valor) {
@@ -396,7 +597,7 @@
   function limparRascunhoDuplicacao() {
     try {
       sessionStorage.removeItem(DUPLICACAO_DRAFT_STORAGE_KEY);
-    } catch {}
+    } catch { }
   }
 
   function navegarParaDuplicacao(payload) {
@@ -722,14 +923,14 @@
     const observacoesSalvas = ficha.observacoesHtml || ficha.observacoes || '';
 
     const camposTexto = [
-      'cliente', 'vendedor', 'dataInicio', 'numeroVenda', 
+      'cliente', 'vendedor', 'dataInicio', 'numeroVenda',
       'dataEntrega', 'evento', 'material', 'composicao',
       'corMaterial', 'manga', 'acabamentoManga', 'larguraManga', 'corAcabamentoManga',
-      'gola', 'corGola', 'acabamentoGola', 'larguraGola', 
+      'gola', 'corGola', 'acabamentoGola', 'larguraGola',
       'corPeitilhoInterno', 'corPeitilhoExterno', 'corBotao',
       'corPeDeGolaInterno', 'corPeDeGolaExterno',
       'aberturaLateral', 'corAberturaLateral',
-      'reforcoGola', 'corReforco', 
+      'reforcoGola', 'corReforco',
       'bolso', 'filete', 'fileteLocal', 'fileteCor',
       'faixa', 'faixaLocal', 'faixaCor', 'arte'
     ];
@@ -934,9 +1135,9 @@
     };
 
     const cores = {
-      success: 'linear-gradient(135deg, #10b981, #059669)',
-      error: 'linear-gradient(135deg, #ef4444, #dc2626)',
-      warning: 'linear-gradient(135deg, #f59e0b, #d97706)'
+      success: 'var(--toast-bg-success)',
+      error: 'var(--toast-bg-error)',
+      warning: 'var(--toast-bg-warning)'
     };
 
     const toast = document.createElement('div');
@@ -948,14 +1149,14 @@
       left: 50%;
       transform: translateX(-50%);
       padding: 16px 24px;
-      border-radius: 12px;
-      color: white;
+      border-radius: var(--radius-xl);
+      color: var(--toast-text-color);
       font-weight: 500;
       display: flex;
       align-items: center;
       gap: 12px;
       z-index: 10001;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      box-shadow: var(--shadow-lg);
       background: ${cores[tipo]};
       animation: toastIn 0.4s ease;
     `;

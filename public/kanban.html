@@ -17,6 +17,7 @@
         })();
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/design-tokens.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/kanban.css">
@@ -52,68 +53,24 @@
         </header>
 
         <main class="kanban-layout">
-            <section class="card kanban-filters-card is-collapsed">
-                <div class="card-header kanban-filters-header">
-                    <button type="button" id="btnToggleFiltrosKanban" class="kanban-filters-toggle" aria-expanded="false"
-                        aria-controls="kanbanFiltersBody">
-                        <span class="kanban-filters-title">
-                            <i class="fas fa-sliders"></i>
-                            <span>Filtros</span>
-                        </span>
-                        <i class="fas fa-chevron-down kanban-filters-chevron" aria-hidden="true"></i>
-                    </button>
-                </div>
-                <div class="card-body kanban-filters-body" id="kanbanFiltersBody" hidden>
-                    <div class="form-group">
-                        <label for="filterClienteKanban">
-                            <i class="fas fa-user"></i>
-                            Filtrar por cliente
-                        </label>
-                        <input type="text" id="filterClienteKanban" class="form-control"
-                            placeholder="Digite o nome do cliente...">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="searchPedidoKanban">
-                            <i class="fas fa-hashtag"></i>
-                            Buscar por pedido
-                        </label>
-                        <input type="text" id="searchPedidoKanban" class="form-control"
-                            placeholder="Número do pedido...">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="sortDataKanban">
-                            <i class="fas fa-sort"></i>
-                            Ordenar por data
-                        </label>
-                        <select id="sortDataKanban" class="form-control">
-                            <option value="manual">Ordem manual</option>
-                            <option value="data_desc">Mais recente</option>
-                            <option value="data_asc">Mais antiga</option>
-                        </select>
-                    </div>
-
-                    <div class="kanban-sidebar-actions">
-                        <button type="button" id="btnLimparFiltrosKanban" class="btn btn-secondary">
-                            <i class="fas fa-eraser"></i>
-                            Limpar
-                        </button>
-                        <button type="button" id="btnAtualizarKanban" class="btn btn-primary">
-                            <i class="fas fa-rotate"></i>
-                            Atualizar
-                        </button>
-                    </div>
-                </div>
-            </section>
-
             <section class="card kanban-board-card">
                 <div class="card-header kanban-board-header">
                     <div class="kanban-board-title">
                         <i class="fas fa-grip"></i>
-                        <span>Quadro de Produção</span>
+                        <input type="text" id="filterClienteKanban" class="form-control kanban-title-search-input"
+                            placeholder="Buscar por Nome" aria-label="Buscar por Nome">
                     </div>
-                    <span id="kanbanTotalCount" class="badge">0 fichas</span>
+                    <div class="kanban-board-header-actions">
+                        <span id="kanbanTotalCount" class="badge">0 fichas</span>
+                        <button type="button" id="badgeFiltroSemanaAtualKanban" class="badge kanban-filter-badge"
+                            title="Filtrar entregas desta semana (ate sexta-feira)" aria-label="Filtrar entregas desta semana (ate sexta-feira)" aria-pressed="false">
+                            Para Essa Semana
+                        </button>
+                        <button type="button" id="btnAtualizarKanban" class="btn btn-secondary btn-icon kanban-refresh-btn"
+                            title="Atualizar quadro" aria-label="Atualizar quadro">
+                            <i class="fas fa-rotate"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body kanban-board-body">
                     <div class="kanban-board-scroll">
@@ -195,3 +152,10 @@
 </body>
 
 </html>
+
+
+
+
+
+
+

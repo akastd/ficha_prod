@@ -19,10 +19,10 @@
   };
 
   const CORES = {
-    success: 'linear-gradient(135deg, #10b981, #059669)',
-    error: 'linear-gradient(135deg, #ef4444, #dc2626)',
-    warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    info: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+    success: 'var(--toast-bg-success)',
+    error: 'var(--toast-bg-error)',
+    warning: 'var(--toast-bg-warning)',
+    info: 'var(--toast-bg-info)'
   };
 
   function injetarEstilos() {
@@ -37,15 +37,15 @@
         left: 50%;
         transform: translateX(-50%) translateY(100%);
         padding: 14px 28px;
-        border-radius: 12px;
-        color: white;
+        border-radius: var(--radius-xl);
+        color: var(--toast-text-color);
         font-weight: 500;
         font-size: 14px;
         display: flex;
         align-items: center;
         gap: 12px;
         z-index: 99999;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        box-shadow: var(--shadow-xl);
         opacity: 0;
         pointer-events: none;
         transition: none;
