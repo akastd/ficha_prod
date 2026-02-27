@@ -225,6 +225,15 @@
     };
 
     const botoes = [];
+    const botaoHomeHub = {
+      id: 'btnHomeHub',
+      classe: 'btn-secondary',
+      icone: 'fa-house',
+      texto: 'In\u00EDcio',
+      onClick: () => {
+        window.location.href = 'index.html';
+      }
+    };
 
     if (modoVisualizacao) {
       botoes.push({ id: 'btnImprimir', classe: 'btn-primary', icone: 'fa-print', texto: 'Imprimir', onClick: acaoImprimir });
@@ -235,7 +244,7 @@
         icone: 'fa-edit',
         texto: 'Editar',
         onClick: () => {
-          window.location.href = `index.html?editar=${fichaAtualId}`;
+          window.location.href = `ficha.html?editar=${fichaAtualId}`;
         }
       });
       botoes.push({
@@ -248,6 +257,7 @@
         },
         alinharDireita: true
       });
+      botoes.push(botaoHomeHub);
     } else if (fichaAtualId) {
       botoes.push({
         id: 'btnSalvarDB',
@@ -285,13 +295,14 @@
         },
         alinharDireita: true
       });
+      botoes.push(botaoHomeHub);
       botoes.push({
         id: 'btnNovaFicha',
         classe: 'btn-success',
         icone: 'fa-plus',
         texto: 'Nova Ficha',
         onClick: () => {
-          window.location.href = 'index.html';
+          window.location.href = 'ficha.html';
         }
       });
     } else {
@@ -325,6 +336,7 @@
         },
         alinharDireita: true
       });
+      botoes.push(botaoHomeHub);
     }
 
     containers.forEach(container => {
@@ -607,7 +619,7 @@
     const salvo = salvarRascunhoDuplicacao(dados);
     if (!salvo) return false;
 
-    window.location.href = 'index.html?duplicar=1';
+    window.location.href = 'ficha.html?duplicar=1';
     return true;
   }
 
@@ -1196,4 +1208,6 @@
   };
 
 })();
+
+
 

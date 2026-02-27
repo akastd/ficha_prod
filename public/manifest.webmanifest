@@ -33,7 +33,7 @@
     {
       "name": "Nova Ficha",
       "short_name": "Nova",
-      "url": "/index.html",
+      "url": "/ficha.html",
       "icons": [
         {
           "src": "/favicon.ico",

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'app-shell-v3';
+const CACHE_VERSION = 'app-shell-v5';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const API_CACHE = `api-${CACHE_VERSION}`;
@@ -7,6 +7,7 @@ const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
+  '/ficha.html',
   '/dashboard.html',
   '/clientes.html',
   '/kanban.html',
@@ -24,6 +25,7 @@ const PRECACHE_URLS = [
   '/css/images.css',
   '/css/drag-drop.css',
   '/css/design-tokens.css',
+  '/css/home.css',
   '/css/dashboard.css',
   '/css/cloudinary-styles.css',
   '/js/toast.js',
@@ -35,6 +37,7 @@ const PRECACHE_URLS = [
   '/js/integration.js',
   '/js/image-handler-cloudinary.js',
   '/js/dashboard.js',
+  '/js/home.js',
   '/js/cloudinary-upload.js',
   '/js/clientes.js',
   '/js/api-client.js',

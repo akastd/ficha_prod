@@ -5,6 +5,21 @@ import cors from 'cors';
 import { createClient } from '@libsql/client';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  KANBAN_STATUS_VALUES,
+  clienteUpdateBodySchema,
+  clientesQuerySchema,
+  cloudinaryDeleteParamsSchema,
+  cloudinaryDeleteQuerySchema,
+  cloudinarySignatureBodySchema,
+  fichaBodySchema,
+  fichaQuerySchema,
+  kanbanOrderBodySchema,
+  kanbanStatusBodySchema,
+  parseWithZod,
+  positiveIdParamSchema,
+  relatorioPeriodoQuerySchema
+} from './src/validators/serverSchemas.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,28 +112,6 @@ function normalizeFichaPayload(dados) {
     comNomes: normalizeComNomesValue(comNomesRaw)
   };
 }
-
-function isValidISODate(value) {
-  const raw = String(value || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
-
-  const [yearStr, monthStr, dayStr] = raw.split('-');
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
-
-  const date = new Date(year, month - 1, day);
-  return date.getFullYear() === year && (date.getMonth() + 1) === month && date.getDate() === day;
-}
-
-const KANBAN_STATUS_VALUES = new Set([
-  'pendente',
-  'exportando',
-  'fila_impressao',
-  'sublimando',
-  'na_costura'
-]);
 
 // Middlewares
 app.use(cors());
@@ -1170,9 +1163,12 @@ app.get('/api/health', async (req, res) => {
 // Listar todas as fichas
 app.get('/api/fichas', async (req, res) => {
   try {
+    const queryData = parseWithZod(res, fichaQuerySchema, req.query, 'Parâmetros de busca inválidos');
+    if (!queryData) return;
+
     await autoEntregarFichasNaCostura();
 
-    const { status, cliente, vendedor, dataInicio, dataFim } = req.query;
+    const { status, cliente, vendedor, dataInicio, dataFim } = queryData;
 
     let query = 'SELECT * FROM fichas WHERE 1=1';
     const params = [];
@@ -1229,7 +1225,10 @@ app.get('/api/fichas', async (req, res) => {
 // Buscar ficha por ID
 app.get('/api/fichas/:id', async (req, res) => {
   try {
-    const ficha = await dbGet('SELECT * FROM fichas WHERE id = ?', [req.params.id]);
+    const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID da ficha inválido');
+    if (!paramsData) return;
+
+    const ficha = await dbGet('SELECT * FROM fichas WHERE id = ?', [paramsData.id]);
 
     if (!ficha) {
       return res.status(404).json({ error: 'Ficha não encontrada' });
@@ -1253,10 +1252,10 @@ app.get('/api/fichas/:id', async (req, res) => {
 // Criar nova ficha
 app.post('/api/fichas', async (req, res) => {
   try {
-    const dados = normalizeFichaPayload(req.body);
-    if (!isValidISODate(dados.dataEntrega)) {
-      return res.status(400).json({ error: 'Data de entrega obrigatória e inválida' });
-    }
+    const bodyData = parseWithZod(res, fichaBodySchema, req.body, 'Dados da ficha inválidos');
+    if (!bodyData) return;
+
+    const dados = normalizeFichaPayload(bodyData);
     const produtosJson = JSON.stringify(dados.produtos || []);
     const now = new Date().toISOString();
 
@@ -1307,16 +1306,19 @@ app.post('/api/fichas', async (req, res) => {
 // Atualizar ficha
 app.put('/api/fichas/:id', async (req, res) => {
   try {
-    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [req.params.id]);
+    const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID da ficha inválido');
+    if (!paramsData) return;
+
+    const bodyData = parseWithZod(res, fichaBodySchema, req.body, 'Dados da ficha inválidos');
+    if (!bodyData) return;
+
+    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [paramsData.id]);
 
     if (!fichaExiste) {
       return res.status(404).json({ error: 'Ficha não encontrada' });
     }
 
-    const dados = normalizeFichaPayload(req.body);
-    if (!isValidISODate(dados.dataEntrega)) {
-      return res.status(400).json({ error: 'Data de entrega obrigatória e inválida' });
-    }
+    const dados = normalizeFichaPayload(bodyData);
     const produtosJson = JSON.stringify(dados.produtos || []);
     const now = new Date().toISOString();
 
@@ -1347,13 +1349,13 @@ app.put('/api/fichas/:id', async (req, res) => {
       dados.filete, dados.fileteLocal, dados.fileteCor,
       dados.faixa, dados.faixaLocal, dados.faixaCor,
       dados.arte, dados.comNomes, dados.observacoes, dados.imagemData, dados.imagensData,
-      produtosJson, now, req.params.id
+      produtosJson, now, paramsData.id
     ];
 
     await dbRun(sql, params);
 
-    console.log(`[fichas] Ficha #${req.params.id} atualizada`);
-    res.json({ id: parseInt(req.params.id), message: 'Ficha atualizada com sucesso' });
+    console.log(`[fichas] Ficha #${paramsData.id} atualizada`);
+    res.json({ id: paramsData.id, message: 'Ficha atualizada com sucesso' });
   } catch (error) {
     console.error('Erro ao atualizar ficha:', error);
     res.status(500).json({ error: 'Erro ao atualizar ficha' });
@@ -1363,7 +1365,10 @@ app.put('/api/fichas/:id', async (req, res) => {
 // Marcar ficha como entregue
 app.patch('/api/fichas/:id/entregar', async (req, res) => {
   try {
-    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [req.params.id]);
+    const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID da ficha inválido');
+    if (!paramsData) return;
+
+    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [paramsData.id]);
 
     if (!fichaExiste) {
       return res.status(404).json({ error: 'Ficha não encontrada' });
@@ -1372,10 +1377,10 @@ app.patch('/api/fichas/:id/entregar', async (req, res) => {
     const now = new Date().toISOString();
     await dbRun(
       `UPDATE fichas SET status = 'entregue', data_entregue = ?, auto_entregue_em = NULL, data_atualizacao = ? WHERE id = ?`,
-      [now, now, req.params.id]
+      [now, now, paramsData.id]
     );
 
-    console.log(`[fichas] Ficha #${req.params.id} marcada como entregue`);
+    console.log(`[fichas] Ficha #${paramsData.id} marcada como entregue`);
     res.json({ message: 'Ficha marcada como entregue' });
   } catch (error) {
     console.error('Erro ao marcar como entregue:', error);
@@ -1386,7 +1391,10 @@ app.patch('/api/fichas/:id/entregar', async (req, res) => {
 // Desmarcar ficha (voltar para pendente)
 app.patch('/api/fichas/:id/pendente', async (req, res) => {
   try {
-    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [req.params.id]);
+    const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID da ficha inválido');
+    if (!paramsData) return;
+
+    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [paramsData.id]);
 
     if (!fichaExiste) {
       return res.status(404).json({ error: 'Ficha não encontrada' });
@@ -1395,10 +1403,10 @@ app.patch('/api/fichas/:id/pendente', async (req, res) => {
     const now = new Date().toISOString();
     await dbRun(
       `UPDATE fichas SET status = 'pendente', data_entregue = NULL, auto_entregue_em = NULL, data_atualizacao = ? WHERE id = ?`,
-      [now, req.params.id]
+      [now, paramsData.id]
     );
 
-    console.log(`[fichas] Ficha #${req.params.id} voltou para pendente`);
+    console.log(`[fichas] Ficha #${paramsData.id} voltou para pendente`);
     res.json({ message: 'Ficha marcada como pendente' });
   } catch (error) {
     console.error('Erro ao marcar como pendente:', error);
@@ -1440,13 +1448,19 @@ app.get('/api/system-status', async (req, res) => {
 // Atualizar status do kanban
 app.patch('/api/fichas/:id/kanban-status', async (req, res) => {
   try {
-    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [req.params.id]);
+    const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID da ficha inválido');
+    if (!paramsData) return;
+
+    const bodyData = parseWithZod(res, kanbanStatusBodySchema, req.body, 'Dados de status do kanban inválidos');
+    if (!bodyData) return;
+
+    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [paramsData.id]);
 
     if (!fichaExiste) {
       return res.status(404).json({ error: 'Ficha não encontrada' });
     }
 
-    const requestedStatus = req.body?.status ?? req.body?.kanbanStatus;
+    const requestedStatus = bodyData.status ?? bodyData.kanbanStatus;
     const kanbanStatus = typeof requestedStatus === 'string'
       ? requestedStatus.trim().toLowerCase()
       : '';
@@ -1458,15 +1472,15 @@ app.patch('/api/fichas/:id/kanban-status', async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const kanbanOrder = await getNextKanbanOrder(kanbanStatus, req.params.id);
+    const kanbanOrder = await getNextKanbanOrder(kanbanStatus, paramsData.id);
     await dbRun(
       'UPDATE fichas SET kanban_status = ?, kanban_status_updated_at = ?, kanban_ordem = ?, data_atualizacao = ? WHERE id = ?',
-      [kanbanStatus, now, kanbanOrder, now, req.params.id]
+      [kanbanStatus, now, kanbanOrder, now, paramsData.id]
     );
 
-    console.log(`[kanban] Ficha #${req.params.id} atualizada: ${kanbanStatus}`);
+    console.log(`[kanban] Ficha #${paramsData.id} atualizada: ${kanbanStatus}`);
     res.json({
-      id: parseInt(req.params.id, 10),
+      id: paramsData.id,
       kanbanStatus,
       kanbanOrder,
       message: 'Status do kanban atualizado com sucesso'
@@ -1480,18 +1494,11 @@ app.patch('/api/fichas/:id/kanban-status', async (req, res) => {
 // Atualizar ordem manual dentro de uma coluna do kanban
 app.patch('/api/kanban/order', async (req, res) => {
   try {
-    const requestedStatus = req.body?.status;
-    const status = typeof requestedStatus === 'string'
-      ? requestedStatus.trim().toLowerCase()
-      : '';
+    const bodyData = parseWithZod(res, kanbanOrderBodySchema, req.body, 'Dados de ordenação do kanban inválidos');
+    if (!bodyData) return;
 
-    if (!KANBAN_STATUS_VALUES.has(status)) {
-      return res.status(400).json({
-        error: 'Status de kanban inválido para ordenação.'
-      });
-    }
-
-    const orderedIdsRaw = Array.isArray(req.body?.orderedIds) ? req.body.orderedIds : [];
+    const status = bodyData.status;
+    const orderedIdsRaw = bodyData.orderedIds;
     const orderedIds = [];
     const seen = new Set();
 
@@ -1525,15 +1532,18 @@ app.patch('/api/kanban/order', async (req, res) => {
 // Deletar ficha
 app.delete('/api/fichas/:id', async (req, res) => {
   try {
-    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [req.params.id]);
+    const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID da ficha inválido');
+    if (!paramsData) return;
+
+    const fichaExiste = await dbGet('SELECT id FROM fichas WHERE id = ?', [paramsData.id]);
 
     if (!fichaExiste) {
       return res.status(404).json({ error: 'Ficha não encontrada' });
     }
 
-    await dbRun('DELETE FROM fichas WHERE id = ?', [req.params.id]);
+    await dbRun('DELETE FROM fichas WHERE id = ?', [paramsData.id]);
 
-    console.log(`[fichas] Ficha #${req.params.id} deletada`);
+    console.log(`[fichas] Ficha #${paramsData.id} deletada`);
     res.json({ message: 'Ficha deletada com sucesso' });
   } catch (error) {
     console.error('Erro ao deletar ficha:', error);
@@ -1544,7 +1554,10 @@ app.delete('/api/fichas/:id', async (req, res) => {
 // Buscar clientes (autocomplete)
 app.get('/api/clientes', async (req, res) => {
   try {
-    const { termo } = req.query;
+    const queryData = parseWithZod(res, clientesQuerySchema, req.query, 'Parâmetros de busca de clientes inválidos');
+    if (!queryData) return;
+
+    const { termo } = queryData;
     let query = 'SELECT nome FROM clientes';
     const params = [];
 
@@ -1588,8 +1601,14 @@ app.get('/api/clientes/lista', async (req, res) => {
 // Atualizar cliente
 app.put('/api/clientes/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { nome, primeiro_pedido, ultimo_pedido } = req.body;
+    const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID do cliente inválido');
+    if (!paramsData) return;
+
+    const bodyData = parseWithZod(res, clienteUpdateBodySchema, req.body, 'Dados do cliente inválidos');
+    if (!bodyData) return;
+
+    const id = paramsData.id;
+    const { nome, primeiro_pedido, ultimo_pedido } = bodyData;
     const nomeNormalizado = normalizeNameCase(nome || '');
 
     const clienteExiste = await dbGet('SELECT * FROM clientes WHERE id = ?', [id]);
@@ -1633,7 +1652,10 @@ app.put('/api/clientes/:id', async (req, res) => {
 // Deletar cliente
 app.delete('/api/clientes/:id', async (req, res) => {
   try {
-    const { id } = req.params;
+    const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID do cliente inválido');
+    if (!paramsData) return;
+
+    const { id } = paramsData;
 
     const clienteExiste = await dbGet('SELECT * FROM clientes WHERE id = ?', [id]);
     if (!clienteExiste) {
@@ -1710,6 +1732,9 @@ app.get('/api/cloudinary/config', (req, res) => {
 // Gerar assinatura para upload signed
 app.post('/api/cloudinary/signature', (req, res) => {
   try {
+    const bodyData = parseWithZod(res, cloudinarySignatureBodySchema, req.body, 'Parâmetros de assinatura inválidos');
+    if (!bodyData) return;
+
     const timestamp = Math.round(new Date().getTime() / 1000);
     const folder = 'fichas';
     const transformation = 'c_limit,w_1500,h_1500,q_auto:good';
@@ -1718,7 +1743,7 @@ app.post('/api/cloudinary/signature', (req, res) => {
       timestamp,
       folder,
       transformation,
-      ...req.body
+      ...bodyData
     };
 
     Object.keys(paramsToSign).forEach(key => {
@@ -1896,8 +1921,13 @@ async function uploadBase64ToCloudinary(base64Data, publicIdPrefix) {
 // Deletar imagem do Cloudinary
 app.delete('/api/cloudinary/image/:publicId', async (req, res) => {
   try {
-    const { publicId } = req.params;
-    const excludeFichaId = req.query.excludeFichaId ? Number(req.query.excludeFichaId) : null;
+    const paramsData = parseWithZod(res, cloudinaryDeleteParamsSchema, req.params, 'Parâmetros de imagem inválidos');
+    if (!paramsData) return;
+    const queryData = parseWithZod(res, cloudinaryDeleteQuerySchema, req.query, 'Parâmetros de exclusão inválidos');
+    if (!queryData) return;
+
+    const { publicId } = paramsData;
+    const excludeFichaId = queryData.excludeFichaId || null;
     const timestamp = Math.round(new Date().getTime() / 1000);
     const realPublicId = publicId.replace(/_SLASH_/g, '/');
 
@@ -1998,7 +2028,9 @@ async function atualizarCliente(nomeCliente, dataInicio) {
 // Relatório principal (ÚNICA definição - usa data_entregue para entregues, data_inicio para pendentes)
 app.get('/api/relatorio', async (req, res) => {
   try {
-    const { periodo, dataInicio, dataFim } = req.query;
+    const queryData = parseWithZod(res, relatorioPeriodoQuerySchema, req.query, 'Parâmetros de relatório inválidos');
+    if (!queryData) return;
+    const { periodo, dataInicio, dataFim } = queryData;
 
     const now = new Date();
     const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -2142,7 +2174,9 @@ app.get('/api/relatorio', async (req, res) => {
 // Análise por vendedor (usa data_inicio para total de pedidos, data_entregue para entregues)
 app.get('/api/relatorio/vendedores', async (req, res) => {
   try {
-    const { periodo, dataInicio, dataFim } = req.query;
+    const queryData = parseWithZod(res, relatorioPeriodoQuerySchema, req.query, 'Parâmetros de relatório inválidos');
+    if (!queryData) return;
+    const { periodo, dataInicio, dataFim } = queryData;
 
     const now = new Date();
     const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -2235,7 +2269,9 @@ app.get('/api/relatorio/vendedores', async (req, res) => {
 // Análise por material
 app.get('/api/relatorio/materiais', async (req, res) => {
   try {
-    const { periodo, dataInicio, dataFim } = req.query;
+    const queryData = parseWithZod(res, relatorioPeriodoQuerySchema, req.query, 'Parâmetros de relatório inválidos');
+    if (!queryData) return;
+    const { periodo, dataInicio, dataFim } = queryData;
 
     const now = new Date();
     const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -2293,7 +2329,9 @@ app.get('/api/relatorio/materiais', async (req, res) => {
 // Top produtos (descrições)
 app.get('/api/relatorio/produtos', async (req, res) => {
   try {
-    const { periodo, dataInicio, dataFim } = req.query;
+    const queryData = parseWithZod(res, relatorioPeriodoQuerySchema, req.query, 'Parâmetros de relatório inválidos');
+    if (!queryData) return;
+    const { periodo, dataInicio, dataFim } = queryData;
 
     const now = new Date();
     const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -2347,7 +2385,9 @@ app.get('/api/relatorio/produtos', async (req, res) => {
 // Top clientes
 app.get('/api/relatorio/clientes-top', async (req, res) => {
   try {
-    const { periodo, dataInicio, dataFim } = req.query;
+    const queryData = parseWithZod(res, relatorioPeriodoQuerySchema, req.query, 'Parâmetros de relatório inválidos');
+    if (!queryData) return;
+    const { periodo, dataInicio, dataFim } = queryData;
 
     const now = new Date();
     const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -2420,7 +2460,9 @@ app.get('/api/relatorio/clientes-top', async (req, res) => {
 // Distribuição por tamanho
 app.get('/api/relatorio/tamanhos', async (req, res) => {
   try {
-    const { periodo, dataInicio, dataFim } = req.query;
+    const queryData = parseWithZod(res, relatorioPeriodoQuerySchema, req.query, 'Parâmetros de relatório inválidos');
+    if (!queryData) return;
+    const { periodo, dataInicio, dataFim } = queryData;
 
     const now = new Date();
     const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -2483,7 +2525,9 @@ app.get('/api/relatorio/tamanhos', async (req, res) => {
 // Comparativo com período anterior
 app.get('/api/relatorio/comparativo', async (req, res) => {
   try {
-    const { periodo, dataInicio, dataFim } = req.query;
+    const queryData = parseWithZod(res, relatorioPeriodoQuerySchema, req.query, 'Parâmetros de relatório inválidos');
+    if (!queryData) return;
+    const { periodo, dataInicio, dataFim } = queryData;
 
     const now = new Date();
     let atual = { inicio: '', fim: '' };
@@ -2601,7 +2645,9 @@ app.get('/api/relatorio/comparativo', async (req, res) => {
 // Indicadores de eficiência
 app.get('/api/relatorio/eficiencia', async (req, res) => {
   try {
-    const { periodo, dataInicio, dataFim } = req.query;
+    const queryData = parseWithZod(res, relatorioPeriodoQuerySchema, req.query, 'Parâmetros de relatório inválidos');
+    if (!queryData) return;
+    const { periodo, dataInicio, dataFim } = queryData;
 
     const now = new Date();
     const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
