@@ -680,6 +680,16 @@
     });
   }
 
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // sem bloqueio de UI se o registro falhar
+      });
+    });
+  }
+
   const initialTheme = normalizeTheme(
     document.documentElement.getAttribute('data-theme') || getSavedTheme()
   );
@@ -688,6 +698,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     injectToolbarIntoHeaders();
     applyTheme(getSavedTheme(), false);
+    registerServiceWorker();
   });
 
   window.addEventListener('storage', event => {

@@ -1,0 +1,46 @@
+{
+  "id": "/",
+  "name": "Fichas Técnicas",
+  "short_name": "Fichas",
+  "description": "Sistema de fichas técnicas para produção, clientes e relatórios.",
+  "lang": "pt-BR",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6fb",
+  "theme_color": "#1f4f7a",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova Ficha",
+      "short_name": "Nova",
+      "url": "/index.html",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "16x16 32x32 48x48",
+          "type": "image/x-icon"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Painel",
+      "url": "/dashboard.html",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "16x16 32x32 48x48",
+          "type": "image/x-icon"
+        }
+      ]
+    }
+  ]
+}

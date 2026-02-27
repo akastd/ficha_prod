@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f4f7a">
+  <title>Sem conexao - Fichas Tecnicas</title>
+  <link rel="stylesheet" href="/css/design-tokens.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .offline-wrap {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .offline-card {
+      width: min(560px, 100%);
+      background: var(--surface, #ffffff);
+      border: 1px solid var(--border, #d4dbe6);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+
+    .offline-card h1 {
+      margin: 0 0 10px;
+      font-size: 1.6rem;
+    }
+
+    .offline-card p {
+      margin: 0 0 18px;
+      color: var(--text-soft, #4d6175);
+    }
+  </style>
+</head>
+<body>
+  <main class="offline-wrap">
+    <section class="offline-card">
+      <h1>Voce está sem conexão</h1>
+      <p>A página solicitada nao esta no cache local. Assim que a internet voltar, tente novamente.</p>
+      <button class="btn btn-primary" type="button" onclick="window.location.reload()">Tentar de novo</button>
+    </section>
+  </main>
+</body>
+</html>
