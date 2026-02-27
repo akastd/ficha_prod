@@ -1336,7 +1336,7 @@
     });
   }
 
-  // ==================== FUNÇÕES DE CRIAÇÃO DE PLANILHAS (ANTIGAS - REMOVIDAS) ====================
+  // ==================== PLANILHA DE DADOS DETALHADOS ====================
 
   function criarPlanilhaDetalhada(workbook, detalhes) {
     const worksheet = workbook.addWorksheet('Dados Detalhados');
@@ -1419,34 +1419,6 @@
     if (taxa >= 90) return 'FFC6EFCE'; // Verde claro
     if (taxa >= 70) return 'FFFFEB9C'; // Amarelo claro
     return 'FFFFC7CE'; // Vermelho claro
-  }
-
-  function getIndicadorDesempenho(taxa) {
-    if (taxa >= 90) return '✓ Excelente';
-    if (taxa >= 70) return '○ Bom';
-    if (taxa >= 50) return '△ Regular';
-    return '✗ Crítico';
-  }
-
-  function classificarTaxa(taxa) {
-    if (taxa >= 90) return 'Excelente';
-    if (taxa >= 70) return 'Bom';
-    if (taxa >= 50) return 'Regular';
-    return 'Crítico';
-  }
-
-  function addStyledRow(worksheet, values, options = {}) {
-    const row = worksheet.addRow(values);
-    row.eachCell((cell, colNumber) => {
-      cell.style = {
-        font: {
-          size: 10,
-          bold: options.boldFirst && colNumber === 1
-        },
-        alignment: { horizontal: 'left', vertical: 'middle' }
-      };
-    });
-    return row;
   }
 
   function calcularTotaisVendedores(dados) {

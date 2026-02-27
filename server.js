@@ -151,16 +151,20 @@ if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
   throw new Error('Configuração ausente: defina TURSO_DATABASE_URL e TURSO_AUTH_TOKEN no ambiente.');
 }
 
-const db = createClient({
-  url: process.env.TURSO_DATABASE_URL,
-  authToken: process.env.TURSO_AUTH_TOKEN
-});
+function createDbClient() {
+  return createClient({
+    url: process.env.TURSO_DATABASE_URL,
+    authToken: process.env.TURSO_AUTH_TOKEN
+  });
+}
+
+let db = createDbClient();
 
 // Inicializar banco de dados
 async function initDatabase() {
   try {
     // Criar tabela de fichas
-    await db.execute(`
+    await executeDb(`
       CREATE TABLE IF NOT EXISTS fichas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         cliente TEXT NOT NULL,
@@ -208,12 +212,13 @@ async function initDatabase() {
         produtos TEXT,
         data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
         data_atualizacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-        data_entregue DATETIME
+        data_entregue DATETIME,
+        auto_entregue_em DATETIME
       )
     `);
 
     // Criar tabela de clientes
-    await db.execute(`
+    await executeDb(`
       CREATE TABLE IF NOT EXISTS clientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT UNIQUE NOT NULL,
@@ -225,11 +230,11 @@ async function initDatabase() {
     `);
 
     // Criar índices
-    await db.execute(`CREATE INDEX IF NOT EXISTS idx_fichas_cliente ON fichas(cliente)`);
-    await db.execute(`CREATE INDEX IF NOT EXISTS idx_fichas_status ON fichas(status)`);
-    await db.execute(`CREATE INDEX IF NOT EXISTS idx_fichas_data_inicio ON fichas(data_inicio)`);
-    await db.execute(`CREATE INDEX IF NOT EXISTS idx_fichas_data_entrega ON fichas(data_entrega)`);
-    await db.execute(`CREATE INDEX IF NOT EXISTS idx_fichas_vendedor ON fichas(vendedor)`);
+    await executeDb(`CREATE INDEX IF NOT EXISTS idx_fichas_cliente ON fichas(cliente)`);
+    await executeDb(`CREATE INDEX IF NOT EXISTS idx_fichas_status ON fichas(status)`);
+    await executeDb(`CREATE INDEX IF NOT EXISTS idx_fichas_data_inicio ON fichas(data_inicio)`);
+    await executeDb(`CREATE INDEX IF NOT EXISTS idx_fichas_data_entrega ON fichas(data_entrega)`);
+    await executeDb(`CREATE INDEX IF NOT EXISTS idx_fichas_vendedor ON fichas(vendedor)`);
 
     // ==================== MIGRAÇÕES ====================
     const migrações = [
@@ -248,12 +253,13 @@ async function initDatabase() {
       'com_nomes INTEGER DEFAULT 0',
       "kanban_status TEXT DEFAULT 'pendente'",
       'kanban_status_updated_at DATETIME',
-      'kanban_ordem INTEGER'
+      'kanban_ordem INTEGER',
+      'auto_entregue_em DATETIME'
     ];
 
     for (const coluna of migrações) {
       try {
-        await db.execute(`ALTER TABLE fichas ADD COLUMN ${coluna}`);
+        await executeDb(`ALTER TABLE fichas ADD COLUMN ${coluna}`);
         console.log(`[db:migration] Coluna ${coluna.split(' ')[0]} adicionada`);
       } catch (e) {
         // Coluna já existe, ignorar
@@ -261,7 +267,7 @@ async function initDatabase() {
     }
 
     try {
-      await db.execute(`
+      await executeDb(`
         UPDATE fichas
         SET com_nomes = CASE
           WHEN observacoes IS NOT NULL AND (UPPER(observacoes) LIKE '%SOMENTE NÚMEROS%' OR UPPER(observacoes) LIKE '%SOMENTE NUMEROS%') THEN 3
@@ -276,20 +282,20 @@ async function initDatabase() {
     }
 
     try {
-      await db.execute(`
+      await executeDb(`
         UPDATE fichas
         SET kanban_status = 'pendente'
         WHERE kanban_status IS NULL OR trim(kanban_status) = ''
       `);
-      await db.execute(`
+      await executeDb(`
         UPDATE fichas
         SET kanban_status_updated_at = COALESCE(kanban_status_updated_at, data_atualizacao, data_criacao, CURRENT_TIMESTAMP)
         WHERE kanban_status_updated_at IS NULL OR trim(kanban_status_updated_at) = ''
       `);
       await preencherKanbanOrdemInicial();
-      await db.execute(`CREATE INDEX IF NOT EXISTS idx_fichas_kanban_status ON fichas(kanban_status)`);
-      await db.execute(`CREATE INDEX IF NOT EXISTS idx_fichas_kanban_status_updated_at ON fichas(kanban_status_updated_at)`);
-      await db.execute(`CREATE INDEX IF NOT EXISTS idx_fichas_kanban_ordem ON fichas(kanban_status, kanban_ordem)`);
+      await executeDb(`CREATE INDEX IF NOT EXISTS idx_fichas_kanban_status ON fichas(kanban_status)`);
+      await executeDb(`CREATE INDEX IF NOT EXISTS idx_fichas_kanban_status_updated_at ON fichas(kanban_status_updated_at)`);
+      await executeDb(`CREATE INDEX IF NOT EXISTS idx_fichas_kanban_ordem ON fichas(kanban_status, kanban_ordem)`);
     } catch (e) {
       // Ignora se a coluna ainda não existir por qualquer motivo.
     }
@@ -304,21 +310,52 @@ async function initDatabase() {
 // ==================== FUNÇÕES AUXILIARES ====================
 
 async function dbAll(sql, params = []) {
-  const result = await db.execute({ sql, args: params });
+  const result = await executeDb({ sql, args: params });
   return result.rows;
 }
 
 async function dbGet(sql, params = []) {
-  const result = await db.execute({ sql, args: params });
+  const result = await executeDb({ sql, args: params });
   return result.rows.length > 0 ? result.rows[0] : null;
 }
 
 async function dbRun(sql, params = []) {
-  const result = await db.execute({ sql, args: params });
+  const result = await executeDb({ sql, args: params });
   return {
     lastInsertRowid: result.lastInsertRowid,
     rowsAffected: result.rowsAffected
   };
+}
+
+function isDbConnectionNotOpenedError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  const causeMessage = String(error?.cause?.message || '').toLowerCase();
+  return message.includes('connection not opened') || causeMessage.includes('connection not opened');
+}
+
+async function recreateDbClient() {
+  const previousDb = db;
+  db = createDbClient();
+  if (previousDb && typeof previousDb.close === 'function') {
+    try {
+      await previousDb.close();
+    } catch (_) {
+      // ignore
+    }
+  }
+}
+
+async function executeDb(statement, attempt = 1) {
+  try {
+    return await db.execute(statement);
+  } catch (error) {
+    const canRetry = attempt < 2 && isDbConnectionNotOpenedError(error);
+    if (!canRetry) throw error;
+
+    console.warn('[db] Conexão não aberta detectada. Recriando cliente Turso e tentando novamente...');
+    await recreateDbClient();
+    return executeDb(statement, attempt + 1);
+  }
 }
 
 async function getNextKanbanOrder(status, excludeId = null) {
@@ -336,7 +373,7 @@ async function getNextKanbanOrder(status, excludeId = null) {
 }
 
 async function preencherKanbanOrdemInicial() {
-  await db.execute(`
+  await executeDb(`
     WITH ranked AS (
       SELECT
         id,
@@ -366,6 +403,7 @@ async function autoEntregarFichasNaCostura() {
       SET
         status = 'entregue',
         data_entregue = COALESCE(data_entregue, ?),
+        auto_entregue_em = COALESCE(auto_entregue_em, ?),
         data_atualizacao = ?
       WHERE
         status != 'entregue'
@@ -373,7 +411,7 @@ async function autoEntregarFichasNaCostura() {
         AND kanban_status_updated_at IS NOT NULL
         AND julianday(replace(replace(kanban_status_updated_at, 'T', ' '), 'Z', '')) <= julianday(?, '-7 days')
     `,
-    [now, now, now]
+    [now, now, now, now]
   );
 
   if ((result?.rowsAffected || 0) > 0) {
@@ -508,23 +546,6 @@ function buildGeoResult(latitude, longitude, city) {
     longitude: lon,
     city: safeCity
   };
-}
-
-function parseGeoFromIpApi(data) {
-  return buildGeoResult(
-    data?.latitude,
-    data?.longitude,
-    data?.city || data?.region || data?.country_name
-  );
-}
-
-function parseGeoFromIpWho(data) {
-  if (data && data.success === false) return null;
-  return buildGeoResult(
-    data?.latitude ?? data?.lat,
-    data?.longitude ?? data?.lon,
-    data?.city || data?.region || data?.country
-  );
 }
 
 function parseGeoFromIpInfo(data) {
@@ -825,7 +846,7 @@ function isCloudinaryConfigured() {
 
 async function getTursoConnectionStatus() {
   try {
-    await db.execute('SELECT 1');
+    await executeDb('SELECT 1');
     return {
       status: 'ok',
       message: 'Conectado (aws-us-east-1.turso.io)'
@@ -1139,7 +1160,7 @@ async function getWeatherSnapshot(req) {
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
-    await db.execute('SELECT 1');
+    await executeDb('SELECT 1');
     res.json({ status: 'ok', database: 'turso connected' });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
@@ -1350,7 +1371,7 @@ app.patch('/api/fichas/:id/entregar', async (req, res) => {
 
     const now = new Date().toISOString();
     await dbRun(
-      `UPDATE fichas SET status = 'entregue', data_entregue = ?, data_atualizacao = ? WHERE id = ?`,
+      `UPDATE fichas SET status = 'entregue', data_entregue = ?, auto_entregue_em = NULL, data_atualizacao = ? WHERE id = ?`,
       [now, now, req.params.id]
     );
 
@@ -1371,7 +1392,11 @@ app.patch('/api/fichas/:id/pendente', async (req, res) => {
       return res.status(404).json({ error: 'Ficha não encontrada' });
     }
 
-    await dbRun(`UPDATE fichas SET status = 'pendente', data_entregue = NULL WHERE id = ?`, [req.params.id]);
+    const now = new Date().toISOString();
+    await dbRun(
+      `UPDATE fichas SET status = 'pendente', data_entregue = NULL, auto_entregue_em = NULL, data_atualizacao = ? WHERE id = ?`,
+      [now, req.params.id]
+    );
 
     console.log(`[fichas] Ficha #${req.params.id} voltou para pendente`);
     res.json({ message: 'Ficha marcada como pendente' });
@@ -2668,11 +2693,20 @@ app.get('*', (req, res) => {
 
 // Iniciar servidor
 initDatabase().then(() => {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log('Servidor rodando em http://localhost:' + PORT);
     console.log('Banco de dados: Turso (LibSQL)');
     console.log('Cloudinary: ' + CLOUDINARY_CONFIG.cloudName);
     console.log('Encoding UTF-8 configurado');
+  });
+
+  server.on('error', (error) => {
+    if (error && error.code === 'EADDRINUSE') {
+      console.error(`Porta ${PORT} já está em uso. Finalize o processo atual ou ajuste PORT no .env.`);
+      process.exit(1);
+    }
+    console.error('Erro ao iniciar servidor HTTP:', error);
+    process.exit(1);
   });
 }).catch(error => {
   console.error('Falha ao iniciar servidor:', error);

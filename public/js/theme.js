@@ -9,6 +9,12 @@
   const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
   const STATUS_REFRESH_INTERVAL_MS = 60 * 1000;
   const GREETING_MESSAGE_ROTATION_INTERVAL_MS = 15 * 1000;
+  const NOTIFICATION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+  const NOTIFICATION_MAX_ITEMS = 30;
+  const AUTO_DELIVERY_NOTIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+  const NOTIFICATION_FEED_KEY = 'site_notifications_feed_v1';
+  const NOTIFICATION_SENT_KEY = 'site_notifications_sent_v1';
+  const NOTIFICATION_UNREAD_KEY = 'site_notifications_unread_v1';
   const FIXED_LOCATION = Object.freeze({
     latitude: -20.9317,
     longitude: -54.9614,
@@ -453,6 +459,303 @@
       .replace(/\{\{\s*temperatureText\s*\}\}/g, temperatureText);
   }
 
+  function toIsoDate(value) {
+    if (!(value instanceof Date)) return '';
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function parseDateOnly(value) {
+    const raw = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+    const [year, month, day] = raw.split('-').map(Number);
+    const parsed = new Date(year, month - 1, day, 0, 0, 0, 0);
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== (month - 1) ||
+      parsed.getDate() !== day
+    ) {
+      return null;
+    }
+    return parsed;
+  }
+
+  function startOfDay(date) {
+    const value = date instanceof Date ? date : new Date();
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 0, 0, 0, 0);
+  }
+
+  function addDays(date, days) {
+    const base = startOfDay(date);
+    base.setDate(base.getDate() + Number(days || 0));
+    return base;
+  }
+
+  function getWeekRangeMondayToSunday(referenceDate) {
+    const now = startOfDay(referenceDate);
+    const weekDay = now.getDay(); // 0 dom, 1 seg
+    const daysFromMonday = weekDay === 0 ? 6 : weekDay - 1;
+    const monday = addDays(now, -daysFromMonday);
+    const sunday = addDays(monday, 6);
+    return { monday, sunday };
+  }
+
+  function formatDateBr(value) {
+    const date = value instanceof Date ? value : parseDateOnly(value);
+    if (!date) return '--/--/----';
+    return date.toLocaleDateString('pt-BR');
+  }
+
+  function formatDateTimeBr(value) {
+    const ts = parseTimestamp(value);
+    if (!Number.isFinite(ts)) return '--/--/---- --:--';
+    return new Date(ts).toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    });
+  }
+
+  function normalizeNotificationFichas(rawList) {
+    const list = Array.isArray(rawList) ? rawList : [];
+    return list.map(item => ({
+      id: Number(item && item.id),
+      cliente: normalizeString(item && item.cliente, 'Cliente não informado'),
+      numeroVenda: normalizeString(item && (item.numero_venda || item.numeroVenda), ''),
+      dataEntrega: normalizeString(item && (item.data_entrega || item.dataEntrega), ''),
+      status: normalizeString(item && item.status, ''),
+      evento: normalizeString(item && item.evento, 'nao'),
+      autoEntregueEm: normalizeString(item && (item.auto_entregue_em || item.autoEntregueEm), '')
+    })).filter(item => Number.isFinite(item.id));
+  }
+
+  function isPendente(ficha) {
+    return normalizeString(ficha && ficha.status, '').toLowerCase() !== 'entregue';
+  }
+
+  function compareByEntregaDate(a, b) {
+    const dateA = parseDateOnly(a && a.dataEntrega);
+    const dateB = parseDateOnly(b && b.dataEntrega);
+    const tsA = dateA ? dateA.getTime() : Number.MAX_SAFE_INTEGER;
+    const tsB = dateB ? dateB.getTime() : Number.MAX_SAFE_INTEGER;
+    return tsA - tsB;
+  }
+
+  function isNotificationExpired(item, nowTs = Date.now()) {
+    const kind = normalizeString(item && item.kind, '').toLowerCase();
+    if (kind !== 'auto_delivery') return false;
+
+    const expiresAtTs = parseTimestamp(item && item.expiresAt);
+    if (Number.isFinite(expiresAtTs)) {
+      return expiresAtTs <= nowTs;
+    }
+
+    const createdAtTs = parseTimestamp(item && item.createdAt);
+    if (!Number.isFinite(createdAtTs)) return false;
+    return (createdAtTs + AUTO_DELIVERY_NOTIFICATION_TTL_MS) <= nowTs;
+  }
+
+  function pruneNotificationFeed(items) {
+    const list = Array.isArray(items) ? items : [];
+    const nowTs = Date.now();
+    return list.filter(item => !isNotificationExpired(item, nowTs));
+  }
+
+  function readNotificationFeed() {
+    try {
+      const raw = localStorage.getItem(NOTIFICATION_FEED_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      const list = Array.isArray(parsed) ? parsed : [];
+      const pruned = pruneNotificationFeed(list).slice(0, NOTIFICATION_MAX_ITEMS);
+      if (pruned.length !== list.length) {
+        localStorage.setItem(NOTIFICATION_FEED_KEY, JSON.stringify(pruned));
+      }
+      return pruned;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function writeNotificationFeed(items) {
+    try {
+      const list = Array.isArray(items) ? items.slice(0, NOTIFICATION_MAX_ITEMS) : [];
+      localStorage.setItem(NOTIFICATION_FEED_KEY, JSON.stringify(list));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  function readNotificationSentMap() {
+    try {
+      const raw = localStorage.getItem(NOTIFICATION_SENT_KEY);
+      if (!raw) return { weekly: {}, deadline: {}, autoDelivery: {} };
+      const parsed = JSON.parse(raw);
+      const weekly = parsed && typeof parsed.weekly === 'object' ? parsed.weekly : {};
+      const deadline = parsed && typeof parsed.deadline === 'object' ? parsed.deadline : {};
+      const autoDelivery = parsed && typeof parsed.autoDelivery === 'object' ? parsed.autoDelivery : {};
+      return { weekly, deadline, autoDelivery };
+    } catch (_) {
+      return { weekly: {}, deadline: {}, autoDelivery: {} };
+    }
+  }
+
+  function writeNotificationSentMap(map) {
+    try {
+      const payload = map && typeof map === 'object'
+        ? map
+        : { weekly: {}, deadline: {}, autoDelivery: {} };
+      localStorage.setItem(NOTIFICATION_SENT_KEY, JSON.stringify({
+        weekly: payload.weekly || {},
+        deadline: payload.deadline || {},
+        autoDelivery: payload.autoDelivery || {}
+      }));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  function readNotificationUnread() {
+    try {
+      const value = Number(localStorage.getItem(NOTIFICATION_UNREAD_KEY));
+      return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function writeNotificationUnread(count) {
+    try {
+      const safeCount = Math.max(0, Number(count) || 0);
+      localStorage.setItem(NOTIFICATION_UNREAD_KEY, String(safeCount));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  function buildWeeklyReminder(now, fichas, sentMap) {
+    const today = startOfDay(now);
+    if (today.getDay() !== 1) return null; // segunda-feira
+
+    const { monday, sunday } = getWeekRangeMondayToSunday(today);
+    const weekKey = toIsoDate(monday);
+    if (sentMap.weekly && sentMap.weekly[weekKey]) return null;
+
+    const pendentesDaSemana = fichas
+      .filter(isPendente)
+      .filter(ficha => {
+        const entrega = parseDateOnly(ficha.dataEntrega);
+        if (!entrega) return false;
+        return entrega >= monday && entrega <= sunday;
+      })
+      .sort(compareByEntregaDate);
+
+    if (pendentesDaSemana.length === 0) return null;
+
+    const topLines = pendentesDaSemana.map(ficha => {
+      const eventoTag = ficha.evento === 'sim' ? ' [Evento]' : '';
+      return `#${ficha.id} - ${ficha.cliente} (${formatDateBr(ficha.dataEntrega)})${eventoTag}`;
+    });
+
+    return {
+      id: `weekly-${weekKey}`,
+      kind: 'weekly',
+      title: 'Resumo semanal de pedidos',
+      message: `${pendentesDaSemana.length} pedido(s) pendente(s) para esta semana.`,
+      details: topLines,
+      count: pendentesDaSemana.length,
+      weekLabel: `${formatDateBr(monday)} até ${formatDateBr(sunday)}`,
+      createdAt: new Date().toISOString(),
+      sentKey: weekKey
+    };
+  }
+
+  function buildDeadlineAlerts(now, fichas, sentMap) {
+    const tomorrow = addDays(now, 1);
+    const tomorrowKey = toIsoDate(tomorrow);
+    const deadlineMap = sentMap && sentMap.deadline ? sentMap.deadline : {};
+
+    return fichas
+      .filter(isPendente)
+      .filter(ficha => toIsoDate(parseDateOnly(ficha.dataEntrega)) === tomorrowKey)
+      .sort(compareByEntregaDate)
+      .map(ficha => {
+        const key = `${ficha.id}:${tomorrowKey}`;
+        if (deadlineMap[key]) return null;
+        const eventoTag = ficha.evento === 'sim' ? ' [Evento]' : '';
+        const vendaText = ficha.numeroVenda ? ` | Venda ${ficha.numeroVenda}` : '';
+        return {
+          id: `deadline-${key}`,
+          kind: 'deadline',
+          title: 'Prazo final: falta 1 dia',
+          message: `Ficha #${ficha.id} (${ficha.cliente}) entrega amanhã.${eventoTag}${vendaText}`,
+          details: [`Entrega: ${formatDateBr(ficha.dataEntrega)}`],
+          cliente: ficha.cliente,
+          fichaId: ficha.id,
+          isEvento: ficha.evento === 'sim',
+          dueDateLabel: formatDateBr(ficha.dataEntrega),
+          createdAt: new Date().toISOString(),
+          sentKey: key
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function buildAutoDeliveryAlerts(now, fichas, sentMap) {
+    const nowTs = now instanceof Date ? now.getTime() : Date.now();
+    const minTs = nowTs - AUTO_DELIVERY_NOTIFICATION_TTL_MS;
+    const autoDeliveryMap = sentMap && sentMap.autoDelivery ? sentMap.autoDelivery : {};
+
+    return fichas
+      .map(ficha => {
+        const deliveredTs = parseTimestamp(ficha && ficha.autoEntregueEm);
+        if (!Number.isFinite(deliveredTs)) return null;
+        if (deliveredTs < minTs || deliveredTs > nowTs) return null;
+
+        const key = `${ficha.id}:${deliveredTs}`;
+        if (autoDeliveryMap[key]) return null;
+
+        const cliente = normalizeString(ficha && ficha.cliente, 'Cliente não informado');
+        return {
+          id: `auto-delivery-${ficha.id}-${deliveredTs}`,
+          kind: 'auto_delivery',
+          title: 'Auto-entrega aplicada',
+          message: `Ficha de ${cliente} foi entregue automaticamente.`,
+          cliente,
+          fichaId: ficha.id,
+          autoDeliveredAtLabel: formatDateTimeBr(deliveredTs),
+          createdAt: new Date(deliveredTs).toISOString(),
+          expiresAt: new Date(deliveredTs + AUTO_DELIVERY_NOTIFICATION_TTL_MS).toISOString(),
+          sentKey: key
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => parseTimestamp(b.createdAt) - parseTimestamp(a.createdAt));
+  }
+
+  function requestBrowserNotificationPermission() {
+    if (!('Notification' in window)) return Promise.resolve('unsupported');
+    if (Notification.permission === 'granted') return Promise.resolve('granted');
+    if (Notification.permission === 'denied') return Promise.resolve('denied');
+    return Notification.requestPermission();
+  }
+
+  function sendBrowserNotification(item) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    try {
+      new Notification(item.title, {
+        body: item.message,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        tag: item.id
+      });
+    } catch (_) {
+      // ignore
+    }
+  }
+
   function rotateGreetingStatusMessage() {
     pickRandomGreetingStatusTemplate(new Date(), true);
   }
@@ -642,6 +945,21 @@
         <span class="site-theme-greeting-line" aria-live="polite">Carregando...</span>
       </div>
       <div class="site-theme-toolbar-actions">
+        <div class="site-notification-wrapper">
+          <button type="button" class="site-notification-btn" aria-label="Notificações do sistema" aria-expanded="false">
+            <i class="fas fa-bell" aria-hidden="true"></i>
+            <span class="site-notification-badge" hidden>0</span>
+          </button>
+          <div class="site-notification-panel" role="dialog" aria-label="Notificações do sistema" hidden>
+            <div class="site-notification-panel-header">
+              <strong>Notificações do Sistema</strong>
+              <button type="button" class="site-notification-activate-btn">Ativar no navegador</button>
+            </div>
+            <div class="site-notification-permission" aria-live="polite"></div>
+            <div class="site-notification-empty">Sem notificações no momento.</div>
+            <div class="site-notification-list"></div>
+          </div>
+        </div>
         <div class="site-info-wrapper">
           <button type="button" class="site-info-btn" aria-label="Informações de conexão" aria-expanded="false">
             <i class="fas fa-circle-info" aria-hidden="true"></i>
@@ -666,7 +984,12 @@
     }
 
     setupInfoTooltip(toolbar);
+    setupNotificationCenter(toolbar);
     hydrateToolbarData(toolbar);
+    processSystemNotifications(toolbar);
+    window.setInterval(() => {
+      processSystemNotifications(toolbar);
+    }, NOTIFICATION_CHECK_INTERVAL_MS);
 
     return toolbar;
   }
@@ -678,6 +1001,367 @@
       if (header.querySelector(':scope > .site-theme-toolbar')) return;
       header.insertBefore(createThemeToolbar(), headerContent);
     });
+  }
+
+  function extractLegacyDeadlineData(item) {
+    const messageRaw = normalizeString(item && item.message, '');
+    const titleRaw = normalizeString(item && item.title, '');
+    const details = Array.isArray(item && item.details) ? item.details : [];
+    const idRaw = normalizeString(item && item.id, '');
+
+    const patterns = [
+      /Ficha\s*#?(\d+)\s*\(([^)]+)\)\s*entrega\s*amanh[ãa]/i,
+      /Ficha\s*de:\s*(.+?)\s*\(#?(\d+)\)\s*[ée]\s*para\s*amanh[ãa]/i
+    ];
+
+    let clienteFromMessage = '';
+    let fichaIdFromMessage = NaN;
+    for (const pattern of patterns) {
+      const match = messageRaw.match(pattern);
+      if (!match) continue;
+      if (pattern === patterns[0]) {
+        fichaIdFromMessage = Number(match[1]);
+        clienteFromMessage = normalizeString(match[2], '');
+      } else {
+        clienteFromMessage = normalizeString(match[1], '');
+        fichaIdFromMessage = Number(match[2]);
+      }
+      break;
+    }
+
+    let dueFromDetail = '';
+    for (const line of details) {
+      const parsedLine = normalizeString(line, '');
+      const dueMatch = parsedLine.match(/Entrega:\s*(.+)$/i);
+      if (dueMatch) {
+        dueFromDetail = normalizeString(dueMatch[1], '');
+        break;
+      }
+    }
+
+    if (!dueFromDetail) {
+      const idMatch = idRaw.match(/^deadline-(\d+):(\d{4}-\d{2}-\d{2})$/i);
+      if (idMatch) {
+        if (!Number.isFinite(fichaIdFromMessage)) {
+          fichaIdFromMessage = Number(idMatch[1]);
+        }
+        dueFromDetail = formatDateBr(idMatch[2]);
+      }
+    }
+
+    return {
+      cliente: normalizeString(clienteFromMessage, normalizeString(titleRaw, '')),
+      fichaId: Number.isFinite(fichaIdFromMessage) ? fichaIdFromMessage : null,
+      dueDateLabel: dueFromDetail,
+      isEvento: /\[Evento\]/i.test(messageRaw) || /evento/i.test(messageRaw)
+    };
+  }
+
+  function buildNotificationItemHtml(item) {
+    const kind = normalizeString(item && item.kind, 'info').toLowerCase();
+    const meta = (() => {
+      if (kind === 'weekly') {
+        return { label: 'Update semanal', icon: 'fa-calendar-week', className: 'weekly' };
+      }
+      if (kind === 'deadline') {
+        return { label: 'Prazo', icon: 'fa-hourglass-half', className: 'deadline' };
+      }
+      if (kind === 'auto_delivery') {
+        return { label: 'Auto-entrega', icon: 'fa-check-circle', className: 'auto-delivery' };
+      }
+      return { label: 'Sistema', icon: 'fa-bell', className: 'info' };
+    })();
+
+    const createdAt = parseTimestamp(item && item.createdAt);
+    const createdLabel = Number.isFinite(createdAt)
+      ? new Date(createdAt).toLocaleString('pt-BR')
+      : 'agora';
+    const tituloRaw = normalizeString(item && item.title, 'Notificação');
+    const mensagemRaw = normalizeString(item && item.message, '');
+    const itemId = normalizeString(item && item.id, '');
+    const titulo = escapeHtml(tituloRaw);
+    const mensagem = escapeHtml(mensagemRaw);
+
+    let bodyHtml = `<p class="site-notification-headline">${mensagem}</p>`;
+
+    if (kind === 'deadline') {
+      const legacy = extractLegacyDeadlineData(item);
+      const clienteSafe = normalizeString(
+        item && item.cliente,
+        normalizeString(legacy.cliente, 'Cliente não informado')
+      );
+      const fichaIdValue = Number(item && item.fichaId);
+      const fichaId = Number.isFinite(fichaIdValue) ? fichaIdValue : legacy.fichaId;
+      const dueDateSafe = normalizeString(
+        item && item.dueDateLabel,
+        normalizeString(legacy.dueDateLabel, '--/--/----')
+      );
+      const isEvento = Boolean(item && item.isEvento) || Boolean(legacy.isEvento);
+      const cliente = escapeHtml(clienteSafe);
+      const dueDateLabel = escapeHtml(dueDateSafe);
+      const eventoHtml = isEvento
+        ? `<span class="site-notification-pill site-notification-pill--event"><i class="fas fa-star" aria-hidden="true"></i> Evento</span>`
+        : '';
+
+      bodyHtml = `
+        <p class="site-notification-headline">
+          Ficha de: <strong>${cliente}</strong>${Number.isFinite(fichaId) ? ` <span class="site-notification-inline-id">(#${fichaId})</span>` : ''} é para amanhã!
+          ${eventoHtml}
+        </p>
+        <div class="site-notification-row">
+          <span class="site-notification-row-label">Entrega:</span>
+          <span class="site-notification-row-value">${dueDateLabel}</span>
+        </div>
+      `;
+    } else if (kind === 'weekly') {
+      const count = Number(item && item.count);
+      const weekLabel = escapeHtml(normalizeString(item && item.weekLabel, ''));
+      const details = Array.isArray(item && item.details) ? item.details : [];
+      const listHtml = details.length > 0
+        ? `<ul class="site-notification-list-compact">${details.slice(0, 8).map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`
+        : '';
+
+      bodyHtml = `
+        <p class="site-notification-headline">
+          ${Number.isFinite(count) ? `${count} pedido(s) para esta semana.` : mensagem}
+        </p>
+        ${weekLabel ? `<div class="site-notification-row"><span class="site-notification-row-label">Período:</span><span class="site-notification-row-value">${weekLabel}</span></div>` : ''}
+        ${listHtml}
+      `;
+    } else if (kind === 'auto_delivery') {
+      const clienteSafe = normalizeString(item && item.cliente, 'Cliente não informado');
+      const fichaIdValue = Number(item && item.fichaId);
+      const deliveredAt = escapeHtml(normalizeString(item && item.autoDeliveredAtLabel, formatDateTimeBr(item && item.createdAt)));
+      const cliente = escapeHtml(clienteSafe);
+
+      bodyHtml = `
+        <p class="site-notification-headline">
+          Ficha de <strong>${cliente}</strong>${Number.isFinite(fichaIdValue) ? ` <span class="site-notification-inline-id">(#${fichaIdValue})</span>` : ''} foi entregue automaticamente.
+        </p>
+        <div class="site-notification-row">
+          <span class="site-notification-row-label">Concluída em:</span>
+          <span class="site-notification-row-value">${deliveredAt}</span>
+        </div>
+      `;
+    }
+
+    return `
+      <article class="site-notification-item site-notification-item--${meta.className}">
+        <header class="site-notification-item-header">
+          <div class="site-notification-item-title-wrap">
+            <span class="site-notification-kind-badge">
+              <i class="fas ${meta.icon}" aria-hidden="true"></i>
+              ${escapeHtml(meta.label)}
+            </span>
+            <strong>${titulo}</strong>
+          </div>
+          <div class="site-notification-item-meta">
+            <time>${escapeHtml(createdLabel)}</time>
+            <button
+              type="button"
+              class="site-notification-dismiss-btn"
+              data-action="dismiss-notification"
+              data-id="${escapeHtml(itemId)}"
+              aria-label="Marcar notificação como lida"
+            >
+              <i class="fas fa-check" aria-hidden="true"></i>
+              Lida
+            </button>
+          </div>
+        </header>
+        <div class="site-notification-content">
+          ${bodyHtml}
+        </div>
+      </article>
+    `;
+  }
+
+  function updateNotificationBadge(toolbar, unread) {
+    const badge = toolbar.querySelector('.site-notification-badge');
+    if (!badge) return;
+    const count = Math.max(0, Number(unread) || 0);
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.hidden = count <= 0;
+  }
+
+  function renderNotificationPanel(toolbar) {
+    const panel = (toolbar && toolbar.__notificationPanel) || toolbar.querySelector('.site-notification-panel');
+    if (!panel) return;
+
+    const listEl = panel.querySelector('.site-notification-list');
+    const emptyEl = panel.querySelector('.site-notification-empty');
+    const permissionEl = panel.querySelector('.site-notification-permission');
+    if (!listEl || !emptyEl || !permissionEl) return;
+
+    const feed = readNotificationFeed();
+    const unread = readNotificationUnread();
+    updateNotificationBadge(toolbar, unread);
+
+    if (feed.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.hidden = false;
+    } else {
+      listEl.innerHTML = feed.map(buildNotificationItemHtml).join('');
+      emptyEl.hidden = true;
+    }
+
+    const permission = ('Notification' in window) ? Notification.permission : 'unsupported';
+    if (permission === 'granted') {
+      permissionEl.textContent = 'Notificações do navegador ativas.';
+    } else if (permission === 'denied') {
+      permissionEl.textContent = 'Notificações bloqueadas no navegador.';
+    } else if (permission === 'unsupported') {
+      permissionEl.textContent = 'Seu navegador não suporta notificações.';
+    } else {
+      permissionEl.textContent = 'Ative para receber alertas do sistema no navegador.';
+    }
+  }
+
+  function setupNotificationCenter(toolbar) {
+    const wrapper = toolbar.querySelector('.site-notification-wrapper');
+    const button = toolbar.querySelector('.site-notification-btn');
+    const panel = toolbar.querySelector('.site-notification-panel');
+    const activateBtn = toolbar.querySelector('.site-notification-activate-btn');
+    if (!wrapper || !button || !panel || !activateBtn) return;
+
+    // Renderiza o painel fora do header para evitar conflitos de stacking context.
+    if (panel.parentElement !== document.body) {
+      document.body.appendChild(panel);
+    }
+    toolbar.__notificationPanel = panel;
+
+    const positionPanel = () => {
+      if (panel.hidden) return;
+      const rect = button.getBoundingClientRect();
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      const panelWidth = Math.min(520, Math.max(280, viewportWidth - 24));
+      const margin = 12;
+      const left = Math.max(
+        margin,
+        Math.min(rect.right - panelWidth, viewportWidth - panelWidth - margin)
+      );
+      const top = rect.bottom + 8;
+
+      panel.style.width = `${panelWidth}px`;
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
+    };
+
+    const setOpen = (open) => {
+      wrapper.classList.toggle('is-open', open);
+      button.setAttribute('aria-expanded', String(open));
+      panel.hidden = !open;
+      if (open) {
+        positionPanel();
+        writeNotificationUnread(0);
+        renderNotificationPanel(toolbar);
+      }
+    };
+
+    setOpen(false);
+    renderNotificationPanel(toolbar);
+
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      const currentlyOpen = wrapper.classList.contains('is-open');
+      setOpen(!currentlyOpen);
+    });
+
+    activateBtn.addEventListener('click', async () => {
+      const result = await requestBrowserNotificationPermission();
+      if (result === 'granted' && typeof window.mostrarSucesso === 'function') {
+        window.mostrarSucesso('Notificações do navegador ativadas.');
+      } else if (result === 'denied' && typeof window.mostrarAviso === 'function') {
+        window.mostrarAviso('Notificações bloqueadas. Libere nas configurações do navegador.');
+      }
+      renderNotificationPanel(toolbar);
+      positionPanel();
+    });
+
+    panel.addEventListener('click', event => {
+      const dismissButton = event.target.closest('button[data-action="dismiss-notification"]');
+      if (!dismissButton) return;
+
+      const itemId = normalizeString(dismissButton.dataset.id, '');
+      if (!itemId) return;
+
+      const currentFeed = readNotificationFeed();
+      const nextFeed = currentFeed.filter(item => String(item && item.id) !== itemId);
+      if (nextFeed.length === currentFeed.length) return;
+
+      writeNotificationFeed(nextFeed);
+      renderNotificationPanel(toolbar);
+    });
+
+    document.addEventListener('click', event => {
+      if (!wrapper.contains(event.target) && !panel.contains(event.target)) {
+        setOpen(false);
+      }
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    });
+
+    window.addEventListener('resize', positionPanel);
+    window.addEventListener('scroll', positionPanel, true);
+  }
+
+  async function processSystemNotifications(toolbar) {
+    let fichas = [];
+    try {
+      fichas = normalizeNotificationFichas(
+        await fetchJsonWithTimeout(`${API_BASE_URL}/fichas`, 8000)
+      );
+    } catch (_) {
+      return;
+    }
+
+    const now = new Date();
+    const sentMap = readNotificationSentMap();
+    const pendingNewItems = [];
+
+    const weekly = buildWeeklyReminder(now, fichas, sentMap);
+    if (weekly) {
+      pendingNewItems.push(weekly);
+      sentMap.weekly[weekly.sentKey] = now.toISOString();
+    }
+
+    const deadlineItems = buildDeadlineAlerts(now, fichas, sentMap);
+    deadlineItems.forEach(item => {
+      pendingNewItems.push(item);
+      sentMap.deadline[item.sentKey] = now.toISOString();
+    });
+
+    const autoDeliveryItems = buildAutoDeliveryAlerts(now, fichas, sentMap);
+    autoDeliveryItems.forEach(item => {
+      pendingNewItems.push(item);
+      sentMap.autoDelivery[item.sentKey] = now.toISOString();
+    });
+
+    const currentFeed = readNotificationFeed();
+    if (pendingNewItems.length === 0) {
+      renderNotificationPanel(toolbar);
+      return;
+    }
+
+    const existingIds = new Set(currentFeed.map(item => String(item && item.id)));
+    const newItems = pendingNewItems.filter(item => !existingIds.has(String(item.id)));
+    if (newItems.length === 0) {
+      writeNotificationSentMap(sentMap);
+      renderNotificationPanel(toolbar);
+      return;
+    }
+
+    const nextFeed = [...newItems, ...currentFeed].slice(0, NOTIFICATION_MAX_ITEMS);
+    writeNotificationFeed(nextFeed);
+    writeNotificationUnread(readNotificationUnread() + newItems.length);
+    writeNotificationSentMap(sentMap);
+
+    newItems.forEach(sendBrowserNotification);
+    renderNotificationPanel(toolbar);
   }
 
   function registerServiceWorker() {

@@ -240,16 +240,10 @@
   }
 
   function sortColumnFichasForDisplay(statusKey, fichas) {
-    return [...fichas].sort((a, b) => compareFichasWithinColumn(a, b, statusKey));
+    return [...fichas].sort((a, b) => compareFichasWithinColumn(a, b));
   }
 
   function compareFichasWithinColumn(a, b) {
-    const sortMode = 'manual';
-    if (sortMode !== 'manual') {
-      const byDate = compareByDatePreference(a, b, sortMode);
-      if (byDate !== 0) return byDate;
-    }
-
     const orderA = normalizeBoardOrder(a?.kanban_ordem);
     const orderB = normalizeBoardOrder(b?.kanban_ordem);
 
@@ -260,7 +254,7 @@
     if (orderA !== null && orderB === null) return -1;
     if (orderA === null && orderB !== null) return 1;
 
-    const byDate = compareByDatePreference(a, b, sortMode);
+    const byDate = compareByDatePreference(a, b);
     if (byDate !== 0) return byDate;
 
     return Number(a?.id || 0) - Number(b?.id || 0);
@@ -1148,11 +1142,6 @@
     return entrega.getTime() >= monday.getTime() && entrega.getTime() <= friday.getTime();
   }
 
-  function getDisplayDate(ficha) {
-    const dateValue = ficha.data_entrega || ficha.data_inicio || '';
-    return formatDate(dateValue);
-  }
-
   function getEntregaInfo(ficha, statusKey) {
     const rawDate = String(ficha?.data_entrega || '').trim();
     if (!rawDate) {
@@ -1214,13 +1203,6 @@
     return time;
   }
 
-  function formatDate(dateString) {
-    if (!dateString) return '-';
-    const [year, month, day] = String(dateString).split('-');
-    if (!year || !month || !day) return '-';
-    return `${day}/${month}/${year}`;
-  }
-
   function formatDisplayName(value) {
     if (typeof value !== 'string') return '';
     const text = value.trim().replace(/\s+/g, ' ');
@@ -1279,13 +1261,6 @@
       .filter(Boolean)
       .map(part => (part === 'dtf' ? 'DTF' : formatDisplayName(part)))
       .join(' ');
-  }
-
-  function normalizeSortMode(value) {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (normalized === 'data_asc') return 'data_asc';
-    if (normalized === 'data_desc') return 'data_desc';
-    return 'manual';
   }
 
   function isEventoFicha(ficha) {
