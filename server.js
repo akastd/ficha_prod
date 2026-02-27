@@ -313,7 +313,10 @@ async function dbGet(sql, params = []) {
 }
 
 async function dbRun(sql, params = []) {
-  const result = await executeDb({ sql, args: params });
+  const safeParams = Array.isArray(params)
+    ? params.map(value => (value === undefined ? null : value))
+    : params;
+  const result = await executeDb({ sql, args: safeParams });
   return {
     lastInsertRowid: result.lastInsertRowid,
     rowsAffected: result.rowsAffected
@@ -1299,7 +1302,10 @@ app.post('/api/fichas', async (req, res) => {
     res.status(201).json({ id: novoId, message: 'Ficha criada com sucesso' });
   } catch (error) {
     console.error('Erro ao criar ficha:', error);
-    res.status(500).json({ error: 'Erro ao criar ficha' });
+    res.status(500).json({
+      error: 'Erro ao criar ficha',
+      details: error?.message || 'Erro interno'
+    });
   }
 });
 
@@ -1358,7 +1364,10 @@ app.put('/api/fichas/:id', async (req, res) => {
     res.json({ id: paramsData.id, message: 'Ficha atualizada com sucesso' });
   } catch (error) {
     console.error('Erro ao atualizar ficha:', error);
-    res.status(500).json({ error: 'Erro ao atualizar ficha' });
+    res.status(500).json({
+      error: 'Erro ao atualizar ficha',
+      details: error?.message || 'Erro interno'
+    });
   }
 });
 
