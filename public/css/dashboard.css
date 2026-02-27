@@ -804,7 +804,7 @@ body.image-preview-open {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -889,7 +889,7 @@ body.image-preview-open {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }
@@ -1154,8 +1154,161 @@ html[data-theme='dark'] .empty-state {
   color: #FFFFFF;
 }
 
+/* Normalizacao mobile */
+@media (max-width: 768px) {
+  .header-content {
+    align-items: stretch;
+    gap: var(--space-10);
+  }
 
+  .header-content > div:first-child {
+    min-width: 0;
+  }
 
+  .header-content h1 {
+    font-size: 1.15rem;
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  .header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: var(--space-8);
+  }
+
+  .header-actions .btn {
+    width: 100%;
+    min-height: 34px;
+    justify-content: center;
+  }
+
+  .filter-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .filter-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .status-filter {
+    width: 100%;
+    margin-left: 0;
+    margin-top: var(--space-8);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .status-filter .btn {
+    flex: 1 1 calc(50% - 4px);
+    min-height: 30px;
+    justify-content: center;
+  }
+
+  .ficha-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+    gap: var(--space-12);
+    overflow: hidden;
+  }
+
+  .ficha-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ficha-cliente {
+    overflow-wrap: anywhere;
+  }
+
+  .ficha-details {
+    gap: var(--space-8);
+  }
+
+  .ficha-detail {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .ficha-thumb {
+    width: 72px;
+    height: 72px;
+  }
+
+  .ficha-thumb.has-image {
+    width: 72px;
+  }
+
+  .ficha-thumb img {
+    max-width: 100%;
+  }
+
+  .ficha-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    align-items: stretch;
+  }
+
+  .ficha-item .btn {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 6px 10px;
+    justify-content: center;
+  }
+
+  .badge {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .modal {
+    padding: var(--space-12);
+  }
+
+  .modal-content {
+    padding: var(--space-16);
+    border-radius: var(--radius-xl);
+  }
+
+  .pagination,
+  .paginacao {
+    gap: var(--space-8);
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .status-filter .btn {
+    flex: 1 1 100%;
+  }
+
+  .ficha-actions {
+    width: 100%;
+  }
+
+  .ficha-actions .btn {
+    flex: 1 1 calc(50% - 4px);
+    max-width: calc(50% - 4px);
+  }
+
+  .pagination .btn,
+  .paginacao .btn {
+    min-height: 32px;
+    padding: 6px 8px;
+  }
+}
 
 
 

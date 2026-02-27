@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'app-shell-v1';
+const CACHE_VERSION = 'app-shell-v3';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const API_CACHE = `api-${CACHE_VERSION}`;
@@ -13,6 +13,8 @@ const PRECACHE_URLS = [
   '/relatorios.html',
   OFFLINE_URL,
   '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
   '/favicon.ico',
   '/robots.txt',
   '/css/style.css',
@@ -180,7 +182,7 @@ self.addEventListener('fetch', event => {
         API_CACHE,
         new Response(
           JSON.stringify({
-            error: 'Sem conexao com o servidor',
+            error: 'Sem conexão com o servidor',
             offline: true
           }),
           {

@@ -68,7 +68,7 @@
                     <div class="kanban-board-header-actions">
                         <span id="kanbanTotalCount" class="badge">0 fichas</span>
                         <button type="button" id="badgeFiltroSemanaAtualKanban" class="badge kanban-filter-badge"
-                            title="Filtrar entregas desta semana (ate sexta-feira)" aria-label="Filtrar entregas desta semana (ate sexta-feira)" aria-pressed="false">
+                            title="Filtrar entregas desta semana (até sexta-feira)" aria-label="Filtrar entregas desta semana (até sexta-feira)" aria-pressed="false">
                             Para Essa Semana
                         </button>
                         <button type="button" id="btnAtualizarKanban" class="btn btn-secondary btn-icon kanban-refresh-btn"
@@ -82,24 +82,39 @@
                         <div id="kanbanBoard" class="kanban-board">
                             <section class="kanban-column" data-status="pendente">
                                 <header class="kanban-column-header pendente">
-                                    <h2><i class="fas fa-hourglass-half"></i> Pendente</h2>
-                                    <span class="kanban-column-count" data-count-for="pendente">0</span>
+                                    <h2><i class="fas fa-hourglass-half"></i> Preparando Arte</h2>
+                                    <div class="kanban-column-header-tools">
+                                        <span class="kanban-column-count" data-count-for="pendente">0</span>
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="pendente" title="Organizar por data">
+                                            <i class="fas fa-calendar-days" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                 </header>
                                 <div class="kanban-column-list" id="kanban-list-pendente"></div>
                             </section>
 
                             <section class="kanban-column" data-status="exportando">
                                 <header class="kanban-column-header exportando">
-                                    <h2><i class="fas fa-file-export"></i> Exportando/Preparando Arte</h2>
-                                    <span class="kanban-column-count" data-count-for="exportando">0</span>
+                                    <h2><i class="fas fa-file-export"></i> Exportado/Arte Separada</h2>
+                                    <div class="kanban-column-header-tools">
+                                        <span class="kanban-column-count" data-count-for="exportando">0</span>
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="exportando" title="Organizar por data">
+                                            <i class="fas fa-calendar-days" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                 </header>
                                 <div class="kanban-column-list" id="kanban-list-exportando"></div>
                             </section>
 
                             <section class="kanban-column" data-status="fila_impressao">
                                 <header class="kanban-column-header fila_impressao">
-                                    <h2><i class="fas fa-print"></i> Na Fila de Impressão/Imprimindo</h2>
-                                    <span class="kanban-column-count" data-count-for="fila_impressao">0</span>
+                                    <h2><i class="fas fa-print"></i> Impresso/Fotolito Impresso</h2>
+                                    <div class="kanban-column-header-tools">
+                                        <span class="kanban-column-count" data-count-for="fila_impressao">0</span>
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="fila_impressao" title="Organizar por data">
+                                            <i class="fas fa-calendar-days" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                 </header>
                                 <div class="kanban-column-list" id="kanban-list-fila_impressao"></div>
                             </section>
@@ -107,15 +122,25 @@
                             <section class="kanban-column" data-status="sublimando">
                                 <header class="kanban-column-header sublimando">
                                     <h2><i class="fas fa-spray-can-sparkles"></i> Sublimando/Na Estamparia</h2>
-                                    <span class="kanban-column-count" data-count-for="sublimando">0</span>
+                                    <div class="kanban-column-header-tools">
+                                        <span class="kanban-column-count" data-count-for="sublimando">0</span>
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="sublimando" title="Organizar por data">
+                                            <i class="fas fa-calendar-days" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                 </header>
                                 <div class="kanban-column-list" id="kanban-list-sublimando"></div>
                             </section>
 
                             <section class="kanban-column" data-status="na_costura">
                                 <header class="kanban-column-header na_costura">
-                                    <h2><i class="fas fa-shirt"></i> Na Costura/Em Revisão</h2>
-                                    <span class="kanban-column-count" data-count-for="na_costura">0</span>
+                                    <h2><i class="fas fa-shirt"></i> Costura/Em Revisão</h2>
+                                    <div class="kanban-column-header-tools">
+                                        <span class="kanban-column-count" data-count-for="na_costura">0</span>
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="na_costura" title="Organizar por data">
+                                            <i class="fas fa-calendar-days" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                 </header>
                                 <div class="kanban-column-list" id="kanban-list-na_costura"></div>
                             </section>
@@ -132,7 +157,7 @@
         <div class="kanban-view-modal-content" role="document">
             <div class="kanban-view-modal-header">
                 <div class="kanban-view-modal-title-wrap">
-                    <strong id="kanbanViewModalTitle" class="kanban-view-modal-title">Visualizacao da Ficha</strong>
+                    <strong id="kanbanViewModalTitle" class="kanban-view-modal-title">Visualização da Ficha</strong>
                     <span class="kanban-view-modal-subtitle">Ficha <span id="kanbanViewFichaId">#-</span></span>
                 </div>
                 <button type="button" id="btnCloseKanbanViewModal" class="kanban-view-modal-close" title="Fechar">
@@ -144,7 +169,7 @@
                     <i class="fas fa-spinner fa-spin"></i>
                     <span>Carregando preview...</span>
                 </div>
-                <iframe id="kanbanViewFrame" class="kanban-view-modal-iframe" title="Visualizacao da ficha"
+                <iframe id="kanbanViewFrame" class="kanban-view-modal-iframe" title="Visualização da Ficha"
                     loading="lazy"></iframe>
             </div>
         </div>
@@ -157,10 +182,3 @@
 </body>
 
 </html>
-
-
-
-
-
-
-

@@ -643,7 +643,7 @@
       </div>
       <div class="site-theme-toolbar-actions">
         <div class="site-info-wrapper">
-          <button type="button" class="site-info-btn" aria-label="Informacoes de conexao" aria-expanded="false">
+          <button type="button" class="site-info-btn" aria-label="Informações de conexão" aria-expanded="false">
             <i class="fas fa-circle-info" aria-hidden="true"></i>
           </button>
           <div class="site-info-tooltip" role="tooltip" hidden></div>

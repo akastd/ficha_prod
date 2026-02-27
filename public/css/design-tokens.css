@@ -49,10 +49,10 @@
   --shadow-focus-neutral: 0 0 0 2px rgba(37, 99, 235, 0.16);
   --shadow-text-soft: 0 1px 1px rgba(0, 0, 0, 0.08);
   --toast-text-color: #FFFFFF;
-  --toast-bg-success: linear-gradient(135deg, #2E8B57, #236E44);
-  --toast-bg-error: linear-gradient(135deg, #C0394D, #9C2B3D);
-  --toast-bg-warning: linear-gradient(135deg, #B07D30, #8E6220);
-  --toast-bg-info: linear-gradient(135deg, #3A6EA8, #2A5592);
+  --toast-bg-success: linear-gradient(135deg, #22C55E 0%, #16A34A 45%, #15803D 100%);
+  --toast-bg-error: linear-gradient(135deg, #F43F5E 0%, #E11D48 45%, #BE123C 100%);
+  --toast-bg-warning: linear-gradient(135deg, #F59E0B 0%, #EA580C 48%, #C2410C 100%);
+  --toast-bg-info: linear-gradient(135deg, #38BDF8 0%, #0EA5E9 45%, #0284C7 100%);
   --color-report-body: #111827;
   --color-report-heading: #111827;
   --color-report-muted: #64748B;

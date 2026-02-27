@@ -186,6 +186,10 @@
   margin-bottom: var(--rel-gap-xl);
 }
 
+.two-columns > .card {
+  min-width: 0;
+}
+
 /* ==================== VENDEDOR DESTAQUE ==================== */
 .top-vendedor {
   display: flex;
@@ -377,6 +381,8 @@
   grid-template-columns: 2fr repeat(5, minmax(70px, 1fr));
   gap: var(--space-10);
   align-items: center;
+  width: 100%;
+  min-width: 0;
 }
 
 .vendedores-report-header {
@@ -397,6 +403,7 @@
   border-radius: var(--rel-radius-sm);
   font-size: 0.9rem;
   margin-bottom: 5px;
+  overflow: hidden;
 }
 
 .vendedores-report-row:last-child {
@@ -410,6 +417,13 @@
 .vendedores-report-name {
   font-weight: 600;
   color: var(--rel-primary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.vendedores-report-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .ranking-item {
@@ -555,15 +569,22 @@
   display: flex;
   flex-direction: column;
   gap: var(--rel-gap-sm);
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
 }
 
 .mini-ranking-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--rel-gap-md);
+  width: 100%;
+  min-width: 0;
   padding: 10px var(--rel-gap-md);
   background: var(--rel-bg);
   border-radius: var(--rel-radius-sm);
+  overflow: visible;
   transition: background 0.2s ease;
 }
 
@@ -599,14 +620,19 @@
 
 .mini-name {
   flex: 1;
+  min-width: 0;
   font-size: 0.9rem;
   color: var(--rel-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .mini-value {
+  flex-shrink: 0;
+  max-width: none;
+  white-space: normal;
+  text-align: right;
+  overflow-wrap: anywhere;
   font-weight: 600;
   font-size: 0.85rem;
   color: var(--rel-secondary);
@@ -885,7 +911,7 @@
 }
 
 /* Mobile Landscape */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .stat-card-large .stat-value {
     font-size: 2rem;
   }
@@ -918,12 +944,29 @@
   }
 
   .vendedores-report-header {
-    display: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8);
+    padding: 10px 12px;
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--rel-border);
+    border-radius: var(--rel-radius-sm);
+    background: var(--rel-bg);
+  }
+
+  .vendedores-report-header > * {
+    min-width: 0;
+  }
+
+  .vendedores-report-header > :first-child {
+    grid-column: 1 / -1;
   }
 
   .vendedores-report-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-8);
+    padding: 12px 14px;
+    align-items: start;
   }
 
   .vendedores-report-name {
@@ -940,7 +983,7 @@
 }
 
 /* Mobile Portrait */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .stats-grid-large {
     grid-template-columns: 1fr;
   }
@@ -1065,6 +1108,104 @@ html[data-theme='dark'] .filter-select option {
     background: var(--rel-bg) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+}
+
+/* Normalizacao mobile */
+@media (max-width: 768px) {
+  .two-columns {
+    gap: var(--space-10);
+  }
+
+  .periodo-selector {
+    gap: var(--space-8);
+  }
+
+  .btn-periodo {
+    min-width: 0;
+    padding: 12px;
+    gap: var(--space-6);
+  }
+
+  .btn-periodo i {
+    font-size: 1.15rem;
+  }
+
+  .btn-periodo span {
+    font-size: 0.82rem;
+  }
+
+  .card-body.actions {
+    padding: var(--space-12);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  .card-body.actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ranking-item,
+  .comparativo-item,
+  .equipe-resumo-item {
+    padding: 12px;
+  }
+
+  .ranking-stats {
+    gap: var(--space-8);
+  }
+
+  .mini-ranking-item {
+    padding: 12px 14px;
+    gap: var(--space-8);
+    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-areas:
+      "pos name"
+      "pos value";
+    align-items: start;
+    min-height: 72px;
+  }
+
+  .mini-pos {
+    grid-area: pos;
+  }
+
+  .mini-name {
+    grid-area: name;
+    font-size: 0.86rem;
+    line-height: 1.3;
+  }
+
+  .mini-value {
+    grid-area: value;
+    max-width: none;
+    text-align: left;
+    white-space: normal;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    margin-top: 2px;
+  }
+
+  .tamanhos-chart,
+  #materiaisContainer {
+    padding: var(--space-10);
+  }
+
+  .vendedores-report-row {
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .comparativo-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+  }
+
+  .filter-select {
+    width: 100%;
   }
 }
 

@@ -1,5 +1,5 @@
 ﻿/**
- * Quadro Kanban de Producao
+ * Quadro Kanban de Produção
  */
 (function () {
   'use strict';
@@ -43,6 +43,7 @@
     },
     pendingPersistById: Object.create(null),
     pendingDeliverById: Object.create(null),
+    pendingSortByStatus: Object.create(null),
     lastMovedFichaId: null
   };
 
@@ -71,7 +72,7 @@
   async function initKanban() {
     const ok = await db.init();
     if (!ok) {
-      throw new Error('Falha de conexao com API');
+      throw new Error('Falha de conexão com API');
     }
 
     state.filters = loadFilters();
@@ -358,7 +359,7 @@
       const isDelivering = Boolean(state.pendingDeliverById[String(fichaId)]);
       const isBusy = isSaving || isDelivering;
       const cardStatus = getBoardStatus(ficha);
-      const cliente = escapeHtml(formatDisplayName(ficha.cliente || 'Cliente nao informado'));
+      const cliente = escapeHtml(formatDisplayName(ficha.cliente || 'Cliente não informado'));
       const numeroPedido = escapeHtml(String(ficha.numero_venda || '-'));
       const personalizacao = getPersonalizacaoLabel(ficha.arte);
       const personalizacaoHtml = personalizacao
@@ -412,6 +413,14 @@
     const countEl = document.querySelector(`.kanban-column-count[data-count-for="${statusKey}"]`);
     if (!countEl) return;
     countEl.textContent = String(total);
+
+    const sortButton = document.querySelector(`.kanban-sort-date-btn[data-status="${statusKey}"]`);
+    if (sortButton) {
+      const isBusy = Boolean(state.pendingSortByStatus[statusKey]);
+      sortButton.disabled = isBusy;
+      sortButton.classList.toggle('is-busy', isBusy);
+      sortButton.title = isBusy ? 'Organizando por data...' : 'Organizar por data';
+    }
   }
 
   function updateTotalCounter(total) {
@@ -428,6 +437,14 @@
 
   async function handleBoardClick(event) {
     hidePreviewTooltip();
+
+    const sortButton = event.target.closest('button[data-action="sort-date"]');
+    if (sortButton) {
+      const status = String(sortButton.dataset.status || '').trim().toLowerCase();
+      if (!VALID_STATUS.has(status)) return;
+      await handleSortColumnByDate(status);
+      return;
+    }
 
     const deliverButton = event.target.closest('button[data-action="deliver"]');
     if (deliverButton) {
@@ -549,10 +566,47 @@
     } catch (error) {
       console.error('Erro ao marcar ficha como entregue pelo Kanban:', error);
       if (typeof window.mostrarErro === 'function') {
-        window.mostrarErro(`Nao foi possivel entregar a ficha #${fichaId}`);
+        window.mostrarErro(`Não foi possível entregar a ficha #${fichaId}`);
       }
     } finally {
       delete state.pendingDeliverById[key];
+      renderKanban();
+    }
+  }
+
+  async function handleSortColumnByDate(statusKey) {
+    if (!VALID_STATUS.has(statusKey)) return;
+    if (state.pendingSortByStatus[statusKey]) return;
+
+    const orderedIds = getColumnOrderByDate(statusKey);
+    if (!orderedIds.length) return;
+
+    const beforeOrder = getColumnOrderFromState(statusKey);
+    if (arraysEqual(beforeOrder, orderedIds)) {
+      if (typeof window.mostrarInfo === 'function') {
+        window.mostrarInfo('A coluna já está organizada por data');
+      }
+      return;
+    }
+
+    state.pendingSortByStatus[statusKey] = true;
+    renderKanban();
+
+    try {
+      applyColumnOrder(statusKey, orderedIds);
+      renderKanban();
+      await db.atualizarKanbanOrdem(statusKey, orderedIds);
+
+      if (typeof window.mostrarInfo === 'function') {
+        window.mostrarInfo('Coluna organizada por data');
+      }
+    } catch (error) {
+      console.error('Erro ao ordenar coluna por data:', error);
+      if (typeof window.mostrarErro === 'function') {
+        window.mostrarErro('Não foi possível organizar a coluna por data');
+      }
+    } finally {
+      delete state.pendingSortByStatus[statusKey];
       renderKanban();
     }
   }
@@ -601,7 +655,7 @@
       const iconEl = ui.viewLoading.querySelector('i');
 
       if (isError) {
-        if (textEl) textEl.textContent = 'Falha ao carregar a visualizacao.';
+        if (textEl) textEl.textContent = 'Falha ao carregar a visualização.';
         if (iconEl) iconEl.className = 'fas fa-exclamation-triangle';
       } else {
         if (textEl) textEl.textContent = 'Carregando preview...';
@@ -786,7 +840,7 @@
       state.lastMovedFichaId = draggedId;
 
       if (typeof window.mostrarErro === 'function') {
-        window.mostrarErro(`Nao foi possivel atualizar a ordem da ficha #${draggedId}`);
+        window.mostrarErro(`Não foi possível atualizar a ordem da ficha #${draggedId}`);
       }
     } finally {
       delete state.pendingPersistById[String(draggedId)];
@@ -905,6 +959,33 @@
     return state.fichas
       .filter(ficha => getBoardStatus(ficha) === statusKey && String(ficha.status || '').toLowerCase() !== 'entregue')
       .sort(compareFichasWithinColumn)
+      .map(ficha => Number(ficha.id))
+      .filter(id => Number.isInteger(id) && id > 0);
+  }
+
+  function getColumnOrderByDate(statusKey) {
+    return state.fichas
+      .filter(ficha => getBoardStatus(ficha) === statusKey && String(ficha.status || '').toLowerCase() !== 'entregue')
+      .sort((a, b) => {
+        const eventoA = isEventoFicha(a);
+        const eventoB = isEventoFicha(b);
+        if (eventoA !== eventoB) return eventoA ? -1 : 1;
+
+        const tsA = getSortTimestamp(a);
+        const tsB = getSortTimestamp(b);
+        const hasA = tsA > 0;
+        const hasB = tsB > 0;
+
+        if (hasA && hasB && tsA !== tsB) return tsA - tsB;
+        if (hasA && !hasB) return -1;
+        if (!hasA && hasB) return 1;
+
+        const orderA = normalizeBoardOrder(a?.kanban_ordem);
+        const orderB = normalizeBoardOrder(b?.kanban_ordem);
+        if (orderA !== null && orderB !== null && orderA !== orderB) return orderA - orderB;
+
+        return Number(a?.id || 0) - Number(b?.id || 0);
+      })
       .map(ficha => Number(ficha.id))
       .filter(id => Number.isInteger(id) && id > 0);
   }
