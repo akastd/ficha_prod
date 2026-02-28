@@ -119,28 +119,42 @@
 
                 <section class="card home-card-section">
                     <div class="card-header">
-                        <div>
-                            <i class="fas fa-truck-fast"></i>
-                            <span>Próximas Entregas</span>
+                        <div class="home-header-tabs-actions">
+                            <div id="hubFolderTabs" class="folder-tabs" role="tablist" aria-label="Abas da operação do dia">
+                                <button
+                                    type="button"
+                                    class="folder-tab is-active"
+                                    role="tab"
+                                    aria-selected="true"
+                                    data-target="upcoming">
+                                    Próximas Entregas
+                                </button>
+                                <button
+                                    type="button"
+                                    class="folder-tab"
+                                    role="tab"
+                                    aria-selected="false"
+                                    data-target="fallback">
+                                    Fichas Não Salvas
+                                    <span id="hubFallbackCount" class="home-fallback-count">0</span>
+                                </button>
+                            </div>
+                            <button type="button" id="hubRefreshBtn" class="btn btn-secondary home-refresh-icon-btn" title="Atualizar listas">
+                                <i class="fas fa-rotate"></i>
+                            </button>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="home-actions-row">
-                            <a href="ficha.html" class="btn btn-primary">
-                                <i class="fas fa-plus"></i>
-                                <span>Nova Ficha</span>
-                            </a>
-                            <a href="kanban.html" class="btn btn-secondary">
-                                <i class="fas fa-table-columns"></i>
-                                <span>Abrir Quadro de Produção</span>
-                            </a>
-                            <button type="button" id="hubRefreshBtn" class="btn btn-warning">
-                                <i class="fas fa-rotate"></i>
-                                <span>Atualizar</span>
-                            </button>
+                        <div id="hubPanelUpcoming" class="home-tab-panel is-open">
+                            <div id="hubUpcomingList" class="home-upcoming-list">
+                                <p class="home-empty">Carregando pedidos pendentes...</p>
+                            </div>
                         </div>
-                        <div id="hubUpcomingList" class="home-upcoming-list">
-                            <p class="home-empty">Carregando pedidos pendentes...</p>
+
+                        <div id="hubPanelFallback" class="home-tab-panel">
+                            <div id="hubFallbackList" class="home-fallback-list">
+                                <p class="home-empty">Nenhum rascunho local pendente.</p>
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -28,6 +28,8 @@
   const UPPERCASE_WORD_PATTERN = /^[A-ZÀ-Ý]{1,4}$/;
   const STORAGE_FILTER_KEY = 'kanban_filters_v1';
   const PREVIEW_READY_MESSAGE = 'ficha-preview-ready';
+  const TAB_RETURN_REFRESH_MIN_AWAY_MS = 30000;
+  const TAB_RETURN_REFRESH_COOLDOWN_MS = 15000;
 
   const state = {
     fichas: [],
@@ -45,7 +47,9 @@
     pendingPersistById: Object.create(null),
     pendingDeliverById: Object.create(null),
     pendingSortByStatus: Object.create(null),
-    lastMovedFichaId: null
+    lastMovedFichaId: null,
+    lastHiddenAt: Date.now(),
+    lastAutoRefreshAt: 0
   };
 
   const ui = {
@@ -147,6 +151,8 @@
     window.addEventListener('message', handleViewFrameMessage);
 
     document.addEventListener('keydown', handleGlobalKeydown);
+    document.addEventListener('visibilitychange', handleVisibilityRefreshTrigger);
+    window.addEventListener('focus', handleWindowFocusRefresh);
 
     document.querySelectorAll('.kanban-column').forEach(column => {
       column.addEventListener('dragenter', handleDragEnterColumn);
@@ -154,6 +160,46 @@
       column.addEventListener('dragleave', handleDragLeaveColumn);
       column.addEventListener('drop', handleDropColumn);
     });
+  }
+
+  function handleVisibilityRefreshTrigger() {
+    if (document.visibilityState === 'hidden') {
+      state.lastHiddenAt = Date.now();
+      return;
+    }
+
+    const awayMs = Date.now() - Number(state.lastHiddenAt || 0);
+    if (awayMs < TAB_RETURN_REFRESH_MIN_AWAY_MS) return;
+
+    refreshBoardFromReturn().catch(error => {
+      console.error('Erro ao autoatualizar Kanban ao voltar para a aba:', error);
+    });
+  }
+
+  function handleWindowFocusRefresh() {
+    if (document.visibilityState === 'hidden') return;
+
+    const awayMs = Date.now() - Number(state.lastHiddenAt || 0);
+    if (awayMs < TAB_RETURN_REFRESH_MIN_AWAY_MS) return;
+
+    refreshBoardFromReturn().catch(error => {
+      console.error('Erro ao autoatualizar Kanban ao recuperar foco:', error);
+    });
+  }
+
+  async function refreshBoardFromReturn() {
+    if (state.isLoading) return;
+
+    const now = Date.now();
+    if (now - Number(state.lastAutoRefreshAt || 0) < TAB_RETURN_REFRESH_COOLDOWN_MS) return;
+
+    state.lastAutoRefreshAt = now;
+    await carregarFichas();
+    renderKanban();
+
+    if (typeof window.mostrarInfo === 'function') {
+      window.mostrarInfo('Quadro atualizado automaticamente');
+    }
   }
 
   async function carregarFichas() {

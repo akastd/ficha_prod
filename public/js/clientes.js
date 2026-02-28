@@ -11,6 +11,8 @@
   const itensPorPagina = 15;
   let ordenacaoAtual = 'nome_asc';
   let clienteParaDeletar = null;
+  let captchaDeleteCliente = '';
+  let ultimoToastCaptchaInvalidoCliente = 0;
 
   document.addEventListener('DOMContentLoaded', async () => {
     await initClientes();
@@ -46,6 +48,10 @@
 
     document.getElementById('btnCancelarDelete').addEventListener('click', fecharModalDelete);
     document.getElementById('btnConfirmarDelete').addEventListener('click', confirmarDelete);
+    const deleteCaptchaInput = document.getElementById('deleteCaptchaInputCliente');
+    if (deleteCaptchaInput) {
+      deleteCaptchaInput.addEventListener('input', atualizarEstadoConfirmarDeleteCliente);
+    }
     document.querySelector('#deleteModal .modal-overlay').addEventListener('click', fecharModalDelete);
   }
 
@@ -269,7 +275,7 @@
 
             <div class="ficha-detail">
               <i class="fas fa-calendar-check"></i>
-              <span>Ultima ficha: ${ultimoPedido}</span>
+              <span>Última ficha: ${ultimoPedido}</span>
             </div>
           </div>
         </div>
@@ -369,17 +375,38 @@
 
   function abrirModalDelete(id, nome) {
     clienteParaDeletar = id;
+    captchaDeleteCliente = gerarCaptchaExclusao();
     document.getElementById('deleteClienteNome').textContent = nome;
+    const captchaLabel = document.getElementById('deleteCaptchaValueCliente');
+    const captchaInput = document.getElementById('deleteCaptchaInputCliente');
+    if (captchaLabel) captchaLabel.textContent = captchaDeleteCliente;
+    if (captchaInput) captchaInput.value = '';
+    atualizarEstadoConfirmarDeleteCliente();
     document.getElementById('deleteModal').style.display = 'flex';
+    if (captchaInput) {
+      setTimeout(() => captchaInput.focus(), 0);
+    }
   }
 
   function fecharModalDelete() {
     document.getElementById('deleteModal').style.display = 'none';
     clienteParaDeletar = null;
+    captchaDeleteCliente = '';
+    const captchaInput = document.getElementById('deleteCaptchaInputCliente');
+    const captchaLabel = document.getElementById('deleteCaptchaValueCliente');
+    if (captchaInput) captchaInput.value = '';
+    if (captchaLabel) captchaLabel.textContent = '';
+    atualizarEstadoConfirmarDeleteCliente();
   }
 
   async function confirmarDelete() {
     if (!clienteParaDeletar) return;
+    const captchaInput = document.getElementById('deleteCaptchaInputCliente');
+    const captchaDigitado = String(captchaInput?.value || '').trim();
+    if (!captchaDeleteCliente || captchaDigitado !== captchaDeleteCliente) {
+      mostrarToast('Código de confirmação inválido para excluir o cliente', 'error');
+      return;
+    }
 
     try {
       const response = await fetch(`${db.baseURL}/clientes/${clienteParaDeletar}`, {
@@ -408,6 +435,32 @@
       const msgLimpa = msg.includes('Unexpected token') ? 'Erro ao excluir cliente' : msg;
       mostrarToast(msgLimpa, 'error');
     }
+  }
+
+  function gerarCaptchaExclusao() {
+    return String(Math.floor(1000 + Math.random() * 9000));
+  }
+
+  function atualizarEstadoConfirmarDeleteCliente() {
+    const btnConfirmarDelete = document.getElementById('btnConfirmarDelete');
+    if (!btnConfirmarDelete) return;
+
+    const captchaInput = document.getElementById('deleteCaptchaInputCliente');
+    const captchaDigitado = String(captchaInput?.value || '').trim();
+    const captchaCompleto = captchaDeleteCliente && captchaDigitado.length === String(captchaDeleteCliente).length;
+    const captchaValido = Boolean(captchaDeleteCliente) && captchaDigitado === captchaDeleteCliente;
+    btnConfirmarDelete.disabled = !captchaValido;
+
+    if (captchaCompleto && !captchaValido) {
+      notificarCaptchaInvalidoCliente();
+    }
+  }
+
+  function notificarCaptchaInvalidoCliente() {
+    const agora = Date.now();
+    if (agora - ultimoToastCaptchaInvalidoCliente < 1200) return;
+    ultimoToastCaptchaInvalidoCliente = agora;
+    mostrarToast('Código de confirmação incorreto', 'error');
   }
 
   // Ver Fichas

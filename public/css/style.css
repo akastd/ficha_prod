@@ -2839,7 +2839,7 @@ html[data-theme='dark'] .subsection-title {
   }
 
   .product-table td:nth-child(5)::before {
-    content: "Acoes";
+    content: "Ações";
   }
 
   .product-table td:nth-child(1),

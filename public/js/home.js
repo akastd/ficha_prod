@@ -7,6 +7,8 @@
   const TREND_RANGE_DAYS = 'days';
   const TREND_RANGE_WEEKS = 'weeks';
   const TREND_RANGE_MONTHS = 'months';
+  const FICHA_FALLBACK_STORAGE_KEY = 'fichas_nao_salvas_fallback_v1';
+  const FALLBACK_LIST_LIMIT = 8;
 
   let intervalId = null;
   let previewModal = null;
@@ -61,6 +63,19 @@
     const el = document.getElementById(id);
     if (!el) return;
     el.textContent = text;
+  }
+
+  function formatDateTimeBr(value) {
+    if (!value) return '--';
+    const date = parseDateTime(value);
+    if (!date) return '--';
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   function parseNumberLike(value) {
@@ -444,6 +459,39 @@
     });
   }
 
+  function setFallbackCount(total) {
+    const badge = document.getElementById('hubFallbackCount');
+    if (!badge) return;
+    badge.textContent = String(Math.max(0, Number(total) || 0));
+  }
+
+  function initFolderTabs() {
+    const wrap = document.getElementById('hubFolderTabs');
+    if (!wrap) return;
+
+    wrap.addEventListener('click', (event) => {
+      const tab = event.target instanceof Element
+        ? event.target.closest('.folder-tab[data-target]')
+        : null;
+      if (!tab) return;
+
+      const target = String(tab.getAttribute('data-target') || '');
+      const tabs = wrap.querySelectorAll('.folder-tab[data-target]');
+      tabs.forEach((item) => {
+        const id = String(item.getAttribute('data-target') || '');
+        const panelId = id === 'upcoming' ? 'hubPanelUpcoming' : 'hubPanelFallback';
+        const panel = document.getElementById(panelId);
+        const ativo = id === target;
+
+        item.classList.toggle('is-active', ativo);
+        item.setAttribute('aria-selected', ativo ? 'true' : 'false');
+        if (panel) {
+          panel.classList.toggle('is-open', ativo);
+        }
+      });
+    });
+  }
+
   function renderUpcoming(fichas) {
     const container = document.getElementById('hubUpcomingList');
     if (!container) return;
@@ -490,6 +538,145 @@
         </a>
       `;
     }).join('');
+  }
+
+  function lerFichasFallbackLocal() {
+    try {
+      const raw = localStorage.getItem(FICHA_FALLBACK_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(item => item && typeof item === 'object');
+    } catch {
+      return [];
+    }
+  }
+
+  function salvarFichasFallbackLocal(lista) {
+    try {
+      localStorage.setItem(FICHA_FALLBACK_STORAGE_KEY, JSON.stringify(Array.isArray(lista) ? lista : []));
+    } catch { }
+  }
+
+  function baixarFallbackJson(item) {
+    if (!item || !item.ficha || typeof item.ficha !== 'object') return;
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const clienteBase = String(item.cliente || item.ficha.cliente || 'sem_cliente')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'sem_cliente';
+    const numeroVenda = String(item.numeroVenda || item.ficha.numeroVenda || '').trim();
+    const vendaBase = numeroVenda
+      ? numeroVenda.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+      : '';
+
+    const partes = ['ficha_local_pendente', clienteBase];
+    if (vendaBase) partes.push(vendaBase);
+    partes.push(stamp);
+
+    const payload = {
+      ...item.ficha,
+      fallbackLocalId: item.localId || null,
+      fallbackDataFalha: item.dataFalha || null
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8'
+    });
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = `${partes.join('_')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+  }
+
+  function renderFallbacks() {
+    const container = document.getElementById('hubFallbackList');
+    if (!container) return;
+
+    const listaCompleta = lerFichasFallbackLocal()
+      .sort((a, b) => String(b?.dataFalha || '').localeCompare(String(a?.dataFalha || '')))
+    ;
+    setFallbackCount(listaCompleta.length);
+
+    const lista = listaCompleta
+      .slice(0, FALLBACK_LIST_LIMIT);
+
+    if (lista.length === 0) {
+      container.innerHTML = '<p class="home-empty">Nenhum rascunho local pendente.</p>';
+      return;
+    }
+
+    container.innerHTML = lista.map(item => {
+      const localId = escapeHtml(String(item.localId || ''));
+      const cliente = escapeHtml(String(item.cliente || item?.ficha?.cliente || 'Cliente não informado').trim());
+      const numeroVenda = escapeHtml(String(item.numeroVenda || item?.ficha?.numeroVenda || '').trim());
+      const dataFalha = escapeHtml(formatDateTimeBr(item.dataFalha));
+      const erro = escapeHtml(String(item.erro || 'Falha ao salvar no banco'));
+      const vendaLinha = numeroVenda ? ` • Venda ${numeroVenda}` : '';
+      return `
+        <article class="home-fallback-item" data-id="${localId}">
+          <div class="home-fallback-main">
+            <strong>${cliente}</strong>
+            <span class="home-upcoming-sub">Falhou em ${dataFalha}${vendaLinha}</span>
+            <span class="home-fallback-error">${erro}</span>
+          </div>
+          <div class="home-fallback-actions">
+            <button type="button" class="btn btn-primary" data-action="abrir" data-id="${localId}">
+              <i class="fas fa-pen"></i>
+              <span>Recuperar</span>
+            </button>
+            <button type="button" class="btn btn-secondary" data-action="baixar" data-id="${localId}">
+              <i class="fas fa-download"></i>
+              <span>JSON</span>
+            </button>
+            <button type="button" class="btn btn-danger" data-action="remover" data-id="${localId}">
+              <i class="fas fa-trash"></i>
+              <span>Excluir</span>
+            </button>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function onFallbackListClick(event) {
+    const button = event.target instanceof Element
+      ? event.target.closest('[data-action][data-id]')
+      : null;
+    if (!button) return;
+
+    const action = String(button.getAttribute('data-action') || '');
+    const id = String(button.getAttribute('data-id') || '');
+    if (!id) return;
+
+    const lista = lerFichasFallbackLocal();
+    const item = lista.find(registro => String(registro?.localId || '') === id);
+    if (!item) {
+      renderFallbacks();
+      return;
+    }
+
+    if (action === 'abrir') {
+      window.location.href = `ficha.html?fallbackLocal=${encodeURIComponent(id)}`;
+      return;
+    }
+
+    if (action === 'baixar') {
+      baixarFallbackJson(item);
+      return;
+    }
+
+    if (action === 'remover') {
+      const atualizada = lista.filter(registro => String(registro?.localId || '') !== id);
+      salvarFichasFallbackLocal(atualizada);
+      renderFallbacks();
+    }
   }
 
   function initPreviewModal() {
@@ -672,6 +859,8 @@
       renderUpcoming([]);
     }
 
+    renderFallbacks();
+
     const nowText = new Date().toLocaleTimeString('pt-BR', {
       hour: '2-digit',
       minute: '2-digit'
@@ -682,6 +871,7 @@
   function init() {
     initPreviewModal();
     initTrendFilters();
+    initFolderTabs();
     updateTrendRange(TREND_RANGE_DAYS);
     window.addEventListener('message', onPreviewFrameMessage);
     document.addEventListener('keydown', onDocumentKeyDown);
@@ -700,11 +890,17 @@
       upcomingList.addEventListener('click', onUpcomingClick);
     }
 
+    const fallbackList = document.getElementById('hubFallbackList');
+    if (fallbackList) {
+      fallbackList.addEventListener('click', onFallbackListClick);
+    }
+
     loadHubData().catch(() => {
       setText('hubLastUpdate', 'Falha ao carregar');
       trendSource = [];
       renderTrendChart(trendRange);
       renderUpcoming([]);
+      renderFallbacks();
     });
 
     if (intervalId) window.clearInterval(intervalId);

@@ -462,10 +462,48 @@ body.page-clientes .clientes-list .ficha-item .btn i {
   line-height: 1.5;
 }
 
+.delete-captcha-hint {
+  margin-bottom: var(--space-8) !important;
+  font-size: var(--font-size-sm);
+  color: var(--text-soft);
+}
+
+#deleteCaptchaValueFicha,
+#deleteCaptchaValueCliente {
+  display: block;
+  margin-top: var(--space-6);
+  text-align: center;
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+#deleteCaptchaInputFicha,
+#deleteCaptchaInputCliente {
+  margin-bottom: var(--space-12);
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .modal-actions {
   display: flex;
   gap: var(--space-10);
   justify-content: flex-end;
+}
+
+.modal-actions .btn:disabled,
+.modal-actions .btn[disabled] {
+  opacity: 0.5;
+  filter: saturate(0.35);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 body.preview-modal-open {
@@ -1309,9 +1347,6 @@ html[data-theme='dark'] .empty-state {
     padding: 6px 8px;
   }
 }
-
-
-
 
 
 

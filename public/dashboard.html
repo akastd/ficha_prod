@@ -197,10 +197,12 @@
         <div class="modal-overlay"></div>
         <div class="modal-content">
             <h3><i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão</h3>
-            <p>Tem certeza que deseja excluir esta ficha? Esta ação não pode ser desfeita.</p>
+            <p>Tem certeza que deseja excluir esta ficha? <strong>Esta ação não pode ser desfeita.</strong></p>
+            <p class="delete-captcha-hint">Para confirmar, digite <strong id="deleteCaptchaValueFicha"></strong></p>
+            <input type="text" id="deleteCaptchaInputFicha" class="form-control" placeholder="Digite o código acima" autocomplete="off" maxlength="4">
             <div class="modal-actions">
                 <button id="btnCancelarDelete" class="btn btn-secondary">Cancelar</button>
-                <button id="btnConfirmarDelete" class="btn btn-danger">Excluir</button>
+                <button id="btnConfirmarDelete" class="btn btn-danger" disabled>Excluir</button>
             </div>
         </div>
     </div>

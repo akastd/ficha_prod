@@ -8,6 +8,8 @@
   let fichasPaginaAtual = [];
   let totalResultados = 0;
   let fichaParaDeletar = null;
+  let captchaDeleteFicha = '';
+  let ultimoToastCaptchaInvalidoFicha = 0;
   let modalVisualizacao = null;
   let iframeVisualizacao = null;
   let tituloModalVisualizacao = null;
@@ -114,8 +116,12 @@
 
     const btnCancelarDelete = document.getElementById('btnCancelarDelete');
     const btnConfirmarDelete = document.getElementById('btnConfirmarDelete');
+    const deleteCaptchaInputFicha = document.getElementById('deleteCaptchaInputFicha');
     if (btnCancelarDelete) btnCancelarDelete.addEventListener('click', fecharModalDelete);
     if (btnConfirmarDelete) btnConfirmarDelete.addEventListener('click', confirmarDelete);
+    if (deleteCaptchaInputFicha) {
+      deleteCaptchaInputFicha.addEventListener('input', atualizarEstadoConfirmarDeleteFicha);
+    }
 
     const modalOverlay = document.querySelector('#deleteModal .modal-overlay');
     if (modalOverlay) {
@@ -973,18 +979,40 @@
 
   function abrirModalDelete(id) {
     fichaParaDeletar = id;
+    captchaDeleteFicha = gerarCaptchaExclusao();
     const modal = document.getElementById('deleteModal');
+    const captchaLabel = document.getElementById('deleteCaptchaValueFicha');
+    const captchaInput = document.getElementById('deleteCaptchaInputFicha');
+
+    if (captchaLabel) captchaLabel.textContent = captchaDeleteFicha;
+    if (captchaInput) captchaInput.value = '';
+    atualizarEstadoConfirmarDeleteFicha();
     if (modal) modal.style.display = 'flex';
+    if (captchaInput) {
+      setTimeout(() => captchaInput.focus(), 0);
+    }
   }
 
   function fecharModalDelete() {
     fichaParaDeletar = null;
+    captchaDeleteFicha = '';
     const modal = document.getElementById('deleteModal');
+    const captchaInput = document.getElementById('deleteCaptchaInputFicha');
+    const captchaLabel = document.getElementById('deleteCaptchaValueFicha');
+    if (captchaInput) captchaInput.value = '';
+    if (captchaLabel) captchaLabel.textContent = '';
+    atualizarEstadoConfirmarDeleteFicha();
     if (modal) modal.style.display = 'none';
   }
 
   async function confirmarDelete() {
     if (!fichaParaDeletar) return;
+    const captchaInput = document.getElementById('deleteCaptchaInputFicha');
+    const captchaDigitado = String(captchaInput?.value || '').trim();
+    if (!captchaDeleteFicha || captchaDigitado !== captchaDeleteFicha) {
+      mostrarErro('Código de confirmação inválido para excluir a ficha');
+      return;
+    }
 
     try {
       await db.deletarFicha(fichaParaDeletar);
@@ -996,6 +1024,32 @@
       console.error('Erro ao deletar ficha:', error);
       mostrarErro('Erro ao excluir ficha');
     }
+  }
+
+  function gerarCaptchaExclusao() {
+    return String(Math.floor(1000 + Math.random() * 9000));
+  }
+
+  function atualizarEstadoConfirmarDeleteFicha() {
+    const btnConfirmarDelete = document.getElementById('btnConfirmarDelete');
+    if (!btnConfirmarDelete) return;
+
+    const captchaInput = document.getElementById('deleteCaptchaInputFicha');
+    const captchaDigitado = String(captchaInput?.value || '').trim();
+    const captchaCompleto = captchaDeleteFicha && captchaDigitado.length === String(captchaDeleteFicha).length;
+    const captchaValido = Boolean(captchaDeleteFicha) && captchaDigitado === captchaDeleteFicha;
+    btnConfirmarDelete.disabled = !captchaValido;
+
+    if (captchaCompleto && !captchaValido) {
+      notificarCaptchaInvalidoFicha();
+    }
+  }
+
+  function notificarCaptchaInvalidoFicha() {
+    const agora = Date.now();
+    if (agora - ultimoToastCaptchaInvalidoFicha < 1200) return;
+    ultimoToastCaptchaInvalidoFicha = agora;
+    mostrarErro('Código de confirmação incorreto');
   }
 
   async function desmarcarComoEntregue(id) {

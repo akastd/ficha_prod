@@ -8,7 +8,10 @@
   let fichaAtualId = null;
   let modoVisualizacao = false;
   let fichaVisualizacaoAtual = null;
+  let fallbackOrigemLocalId = null;
   const DUPLICACAO_DRAFT_STORAGE_KEY = 'ficha_duplicada_draft_v1';
+  const FICHA_FALLBACK_STORAGE_KEY = 'fichas_nao_salvas_fallback_v1';
+  const FICHA_FALLBACK_MAX_ITEMS = 20;
   const CAMPOS_OBRIGATORIOS = Object.freeze([
     { key: 'cliente', id: 'cliente', label: 'o nome do cliente' },
     { key: 'vendedor', id: 'vendedor', label: 'o vendedor' },
@@ -612,6 +615,146 @@
     } catch { }
   }
 
+  function normalizarNomeArquivo(valor, fallback = 'ficha') {
+    const base = String(valor || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    return base || fallback;
+  }
+
+  function baixarJsonFicha(dados, prefixo = 'ficha_fallback') {
+    const payload = {
+      ...dados,
+      fallbackGeradoEm: new Date().toISOString()
+    };
+
+    const clienteSlug = normalizarNomeArquivo(dados?.cliente, 'sem_cliente');
+    const vendaSlug = normalizarNomeArquivo(dados?.numeroVenda, '');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const partes = [prefixo, clienteSlug];
+    if (vendaSlug) partes.push(vendaSlug);
+    partes.push(stamp);
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8'
+    });
+
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = `${partes.join('_')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(href);
+  }
+
+  function lerFichasFallbackLocal() {
+    try {
+      const raw = localStorage.getItem(FICHA_FALLBACK_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(item => item && typeof item === 'object');
+    } catch {
+      return [];
+    }
+  }
+
+  function salvarFichasFallbackLocal(lista) {
+    localStorage.setItem(FICHA_FALLBACK_STORAGE_KEY, JSON.stringify(lista));
+  }
+
+  function gerarFallbackFingerprint(dados) {
+    const id = Number.parseInt(String(dados?.id || ''), 10);
+    if (Number.isInteger(id) && id > 0) return `id:${id}`;
+
+    const cliente = String(dados?.cliente || '').trim().toLowerCase();
+    const venda = String(dados?.numeroVenda || '').trim().toLowerCase();
+    const entrega = String(dados?.dataEntrega || '').trim();
+    return `novo:${cliente}|${venda}|${entrega}`;
+  }
+
+  function salvarFichaFallbackLocal(dados, error) {
+    const listaAtual = lerFichasFallbackLocal();
+    const agoraIso = new Date().toISOString();
+    const fingerprint = gerarFallbackFingerprint(dados);
+    const indiceExistente = listaAtual.findIndex(item => String(item?.fingerprint || '') === fingerprint);
+
+    const item = {
+      localId: indiceExistente >= 0 && listaAtual[indiceExistente]?.localId
+        ? String(listaAtual[indiceExistente].localId)
+        : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+      fingerprint,
+      cliente: String(dados?.cliente || '').trim(),
+      numeroVenda: String(dados?.numeroVenda || '').trim(),
+      dataEntrega: String(dados?.dataEntrega || '').trim(),
+      dataFalha: agoraIso,
+      erro: String(error?.message || 'Falha ao salvar no banco'),
+      ficha: { ...dados }
+    };
+
+    if (indiceExistente >= 0) {
+      listaAtual[indiceExistente] = item;
+    } else {
+      listaAtual.unshift(item);
+    }
+
+    const listaFinal = listaAtual
+      .sort((a, b) => String(b?.dataFalha || '').localeCompare(String(a?.dataFalha || '')))
+      .slice(0, FICHA_FALLBACK_MAX_ITEMS);
+
+    salvarFichasFallbackLocal(listaFinal);
+    return item.localId;
+  }
+
+  function removerFichaFallbackLocal(localId) {
+    if (!localId) return;
+    try {
+      const lista = lerFichasFallbackLocal();
+      const filtrada = lista.filter(item => String(item?.localId || '') !== String(localId));
+      salvarFichasFallbackLocal(filtrada);
+    } catch { }
+  }
+
+  function removerFichaFallbackPorDados(dados) {
+    try {
+      const fingerprint = gerarFallbackFingerprint(dados);
+      const lista = lerFichasFallbackLocal();
+      const filtrada = lista.filter(item => String(item?.fingerprint || '') !== String(fingerprint));
+      salvarFichasFallbackLocal(filtrada);
+    } catch { }
+  }
+
+  function carregarFichaFallbackLocal(localId) {
+    const lista = lerFichasFallbackLocal();
+    const item = lista.find(registro => String(registro?.localId || '') === String(localId));
+    if (!item || !item.ficha || typeof item.ficha !== 'object') return null;
+    return item;
+  }
+
+  function aplicarFallbackSalvar(dados, error) {
+    const resultado = {
+      downloadOk: false,
+      localOk: false
+    };
+
+    try {
+      baixarJsonFicha(dados, 'ficha_fallback_erro_db');
+      resultado.downloadOk = true;
+    } catch { }
+
+    try {
+      const localId = salvarFichaFallbackLocal(dados, error);
+      if (localId) resultado.localOk = true;
+    } catch { }
+
+    return resultado;
+  }
+
   function navegarParaDuplicacao(payload) {
     const dados = prepararDadosParaDuplicacao(payload);
     if (!dados) return false;
@@ -673,8 +816,9 @@
   }
 
   async function salvarNoBanco() {
+    let dados = null;
     try {
-      const dados = coletarDadosFormulario();
+      dados = coletarDadosFormulario();
 
       if (!validarCamposObrigatorios(dados)) {
         return;
@@ -703,9 +847,22 @@
 
       await initClienteAutocomplete();
 
+      removerFichaFallbackPorDados(dados);
+
+      if (fallbackOrigemLocalId) {
+        removerFichaFallbackLocal(fallbackOrigemLocalId);
+        fallbackOrigemLocalId = null;
+      }
+
     } catch (error) {
       const mensagemErro = construirMensagemErroSalvar(error);
-      mostrarToast(mensagemErro, 'error');
+      const fallback = dados ? aplicarFallbackSalvar(dados, error) : { downloadOk: false, localOk: false };
+
+      const detalhes = [];
+      if (fallback.downloadOk) detalhes.push('JSON baixado automaticamente.');
+      if (fallback.localOk) detalhes.push('Rascunho guardado localmente na Central.');
+      const mensagemFinal = detalhes.length ? `${mensagemErro} ${detalhes.join(' ')}` : mensagemErro;
+      mostrarToast(mensagemFinal, 'warning');
     }
   }
 
@@ -842,6 +999,7 @@
     const editarId = params.get('editar');
     const visualizarId = params.get('visualizar');
     const duplicar = params.get('duplicar');
+    const fallbackLocalId = params.get('fallbackLocal');
 
     if (editarId) {
       modoVisualizacao = false;
@@ -875,6 +1033,28 @@
 
       const novaUrl = new URL(window.location.href);
       novaUrl.searchParams.delete('duplicar');
+      window.history.replaceState({}, '', novaUrl.toString());
+    } else if (fallbackLocalId) {
+      modoVisualizacao = false;
+      fichaVisualizacaoAtual = null;
+      if (typeof window.setFichaVisualizacaoData === 'function') {
+        window.setFichaVisualizacaoData(null);
+      }
+
+      const itemFallback = carregarFichaFallbackLocal(fallbackLocalId);
+      if (itemFallback?.ficha) {
+        fallbackOrigemLocalId = String(itemFallback.localId || fallbackLocalId);
+        setTimeout(() => {
+          preencherFormulario(itemFallback.ficha);
+          configurarBotoesAcao();
+          mostrarToast('Rascunho local carregado. Clique em salvar para enviar ao banco.', 'warning');
+        }, 100);
+      } else {
+        mostrarToast('Rascunho local não encontrado.', 'error');
+      }
+
+      const novaUrl = new URL(window.location.href);
+      novaUrl.searchParams.delete('fallbackLocal');
       window.history.replaceState({}, '', novaUrl.toString());
     } else {
       modoVisualizacao = false;
