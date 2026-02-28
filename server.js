@@ -135,17 +135,22 @@ app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      // Evita servir HTML antigo, que pode carregar bundle incompatível.
+      res.setHeader('Cache-Control', 'no-store');
     } else if (filePath.endsWith('.webmanifest')) {
       res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
     } else if (filePath.endsWith('sw.js')) {
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'no-store');
     } else if (filePath.endsWith('.css')) {
       res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     } else if (filePath.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     } else if (filePath.endsWith('.json')) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     }
   }
 }));

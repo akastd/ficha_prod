@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'app-shell-v5';
+const CACHE_VERSION = 'app-shell-v6';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const API_CACHE = `api-${CACHE_VERSION}`;
@@ -117,6 +117,13 @@ function isStaticAssetRequest(url) {
     || url.pathname === '/manifest.webmanifest';
 }
 
+function isCriticalAssetRequest(url) {
+  return url.pathname.startsWith('/css/')
+    || url.pathname.startsWith('/js/')
+    || url.pathname.startsWith('/data/')
+    || url.pathname === '/manifest.webmanifest';
+}
+
 async function networkFirst(request, cacheName, fallbackResponse) {
   const cache = await caches.open(cacheName);
 
@@ -199,6 +206,17 @@ self.addEventListener('fetch', event => {
   }
 
   if (isStaticAssetRequest(url)) {
+    if (isCriticalAssetRequest(url)) {
+      event.respondWith(
+        networkFirst(
+          request,
+          RUNTIME_CACHE,
+          new Response('', { status: 503, statusText: 'Offline' })
+        )
+      );
+      return;
+    }
+
     event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
   }
 });
