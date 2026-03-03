@@ -903,17 +903,75 @@
     return true;
   }
 
+  function normalizarTextoObservacoes(valor) {
+    return String(valor || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/[ \t]+$/g, '')
+      .replace(/(?:[\n\r\t ]|\u00a0)+$/g, '');
+  }
+
+  function limparVaziosFinaisHtmlObservacoes(html) {
+    const bruto = String(html || '');
+    if (!bruto.trim()) return '';
+
+    const temp = document.createElement('div');
+    temp.innerHTML = bruto;
+
+    const elementosComConteudo = new Set(['img', 'svg', 'video', 'audio', 'iframe', 'canvas', 'object', 'embed']);
+
+    const textoVisivel = valor => String(valor || '').replace(/\u00a0/g, ' ').trim();
+
+    const noEhVazio = no => {
+      if (!no) return true;
+
+      if (no.nodeType === Node.TEXT_NODE) {
+        return !textoVisivel(no.textContent);
+      }
+
+      if (no.nodeType !== Node.ELEMENT_NODE) return true;
+
+      const tag = String(no.tagName || '').toLowerCase();
+      if (elementosComConteudo.has(tag)) return false;
+      if (tag === 'br') return true;
+      if (textoVisivel(no.textContent)) return false;
+
+      return Array.from(no.childNodes || []).every(filho => noEhVazio(filho));
+    };
+
+    while (temp.lastChild && noEhVazio(temp.lastChild)) {
+      temp.removeChild(temp.lastChild);
+    }
+
+    return temp.innerHTML.trim();
+  }
+
+  function sanitizarObservacoesParaPersistencia(valor) {
+    const bruto = String(valor || '');
+    if (!bruto.trim()) return '';
+
+    const pareceHtml = /<[^>]+>/.test(bruto);
+    if (!pareceHtml) {
+      return normalizarTextoObservacoes(bruto);
+    }
+
+    const htmlSemVaziosFinais = limparVaziosFinaisHtmlObservacoes(bruto);
+    if (!htmlSemVaziosFinais) return '';
+
+    return normalizarTextoObservacoes(htmlSemVaziosFinais);
+  }
+
   function coletarObservacoesFormulario() {
     const observacoesTextarea = document.getElementById('observacoes');
     const valorTextarea = observacoesTextarea?.value || '';
 
     if (!window.richTextEditor || typeof window.richTextEditor.getContent !== 'function') {
-      return valorTextarea;
+      return sanitizarObservacoesParaPersistencia(valorTextarea);
     }
 
     const valorEditor = String(window.richTextEditor.getContent() || '');
-    if (valorEditor.trim()) return valorEditor;
-    return valorTextarea;
+    if (valorEditor.trim()) return sanitizarObservacoesParaPersistencia(valorEditor);
+    return sanitizarObservacoesParaPersistencia(valorTextarea);
   }
 
   function coletarDadosFormulario() {

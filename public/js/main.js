@@ -19,6 +19,7 @@
 
   let imagens = [];
   let alertaLimiteProdutosFechado = false;
+  let alertaProdutosMesmoTamanhoFechado = false;
   let fichaVisualizacaoDireta = null;
 
   function valorEhSim(valor) {
@@ -1061,6 +1062,15 @@
       if (e.target.classList.contains('produto') || e.target.classList.contains('descricao')) {
         aplicarRegrasAutomaticasDoPrimeiroProduto();
       }
+      if (
+        e.target.classList.contains('quantidade')
+        || e.target.classList.contains('tamanho')
+        || e.target.classList.contains('produto')
+        || e.target.classList.contains('descricao')
+        || e.target.classList.contains('detalhes-produto')
+      ) {
+        atualizarAlertaProdutosMesmoTamanho();
+      }
     });
 
     tabelaBody.addEventListener('input', e => {
@@ -1076,11 +1086,29 @@
       if (e.target.classList.contains('produto') || e.target.classList.contains('descricao')) {
         aplicarRegrasAutomaticasDoPrimeiroProduto();
       }
+      if (
+        e.target.classList.contains('quantidade')
+        || e.target.classList.contains('tamanho')
+        || e.target.classList.contains('produto')
+        || e.target.classList.contains('descricao')
+        || e.target.classList.contains('detalhes-produto')
+      ) {
+        atualizarAlertaProdutosMesmoTamanho();
+      }
     });
 
     tabelaBody.addEventListener('change', e => {
       if (e.target.classList.contains('produto') || e.target.classList.contains('descricao')) {
         aplicarRegrasAutomaticasDoPrimeiroProduto();
+      }
+      if (
+        e.target.classList.contains('quantidade')
+        || e.target.classList.contains('tamanho')
+        || e.target.classList.contains('produto')
+        || e.target.classList.contains('descricao')
+        || e.target.classList.contains('detalhes-produto')
+      ) {
+        atualizarAlertaProdutosMesmoTamanho();
       }
     });
 
@@ -1150,6 +1178,67 @@
     document.body.appendChild(toast);
   }
 
+  function exibirAlertaProdutosMesmoTamanho() {
+    let toast = document.getElementById('toast-produtos-mesmo-tamanho');
+    if (toast) {
+      toast.style.display = 'flex';
+      return;
+    }
+
+    toast = document.createElement('div');
+    toast.id = 'toast-produtos-mesmo-tamanho';
+    toast.className = 'toast-limite-produtos';
+    toast.innerHTML = `
+      <div class="toast-limite-produtos__content">
+        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+        <span>Há <strong>produtos</strong> iguais com o mesmo <strong>tamanho</strong> e <strong>descrição</strong>.</span>
+      </div>
+      <button type="button" class="toast-limite-produtos__close" aria-label="Fechar alerta">×</button>
+    `;
+
+    const btnFechar = toast.querySelector('.toast-limite-produtos__close');
+    btnFechar?.addEventListener('click', () => {
+      toast.style.display = 'none';
+      alertaProdutosMesmoTamanhoFechado = true;
+    });
+
+    document.body.appendChild(toast);
+  }
+
+  function atualizarAlertaProdutosMesmoTamanho() {
+    const produtosPorTamanho = new Set();
+    const chavesDuplicadas = new Set();
+
+    document.querySelectorAll('#produtosTable tr').forEach(row => {
+      const produtoRaw = row.querySelector('.produto')?.value || row.querySelector('.descricao')?.value || '';
+      const tamanhoRaw = row.querySelector('.tamanho')?.value || '';
+      const descricaoRaw = row.querySelector('.detalhes-produto')?.value || '';
+      const produto = String(produtoRaw || '').trim().toLowerCase();
+      const tamanho = String(tamanhoRaw || '').trim().toUpperCase();
+      const descricao = String(descricaoRaw || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!produto || !tamanho) return;
+      const chave = `${produto}__${tamanho}__${descricao}`;
+
+      if (produtosPorTamanho.has(chave)) {
+        chavesDuplicadas.add(chave);
+      } else {
+        produtosPorTamanho.add(chave);
+      }
+    });
+
+    const temConflito = chavesDuplicadas.size > 0;
+    const toast = document.getElementById('toast-produtos-mesmo-tamanho');
+
+    if (!temConflito) {
+      alertaProdutosMesmoTamanhoFechado = false;
+      if (toast) toast.style.display = 'none';
+      return;
+    }
+
+    if (alertaProdutosMesmoTamanhoFechado) return;
+    exibirAlertaProdutosMesmoTamanho();
+  }
+
   function atualizarAlertaLimiteProdutos() {
     const totalProdutos = document.querySelectorAll('#produtosTable tr').length;
     const passouLimite = totalProdutos > 20;
@@ -1175,6 +1264,7 @@
     const totalSpan = document.getElementById('totalItens');
     if (totalSpan) totalSpan.textContent = total;
     atualizarAlertaLimiteProdutos();
+    atualizarAlertaProdutosMesmoTamanho();
   }
 
   window.atualizarTotalItens = atualizarTotalItens;
@@ -2004,7 +2094,7 @@
 
   // Impressão
   function ocultarTodosToasts() {
-    const seletores = ['.toast-global', '.toast-custom', '#toast-limite-produtos'];
+    const seletores = ['.toast-global', '.toast-custom', '#toast-limite-produtos', '#toast-produtos-mesmo-tamanho'];
     seletores.forEach(seletor => {
       document.querySelectorAll(seletor).forEach(el => {
         el.style.display = 'none';
@@ -2048,6 +2138,30 @@
     if (printV.scrollHeight <= alturaMaxA4Px) return;
 
     printV.classList.add('print-compact');
+  }
+
+  function aplicarAjusteAlturaImagensPorObservacoes() {
+    const printV = document.getElementById('print-version');
+    const observacoesEl = document.getElementById('print-observacoes');
+    if (!printV || !observacoesEl) return;
+
+    const textoVisivel = String(observacoesEl.textContent || '').trim();
+    if (!textoVisivel || textoVisivel.toLowerCase() === 'nenhuma') {
+      printV.style.setProperty('--obs-extra-lines', '0');
+      return;
+    }
+
+    const lineHeight = parseFloat(window.getComputedStyle(observacoesEl).lineHeight || '0');
+    let linhas = 1;
+
+    if (Number.isFinite(lineHeight) && lineHeight > 0) {
+      linhas = Math.max(1, Math.round(observacoesEl.scrollHeight / lineHeight));
+    } else {
+      linhas = Math.max(1, textoVisivel.split(/\r?\n/).length);
+    }
+
+    const linhasExtras = Math.max(0, linhas - 4);
+    printV.style.setProperty('--obs-extra-lines', String(linhasExtras));
   }
 
   async function aguardarImagensDaImpressao(timeoutMs = 1500) {
@@ -2271,60 +2385,242 @@
     const produtosFonte = usarFichaDireta
       ? (Array.isArray(fichaDireta.produtos) ? fichaDireta.produtos : [])
       : [];
+    const registrosProdutosImpressao = usarFichaDireta
+      ? produtosFonte.map(item => ({
+        tamanho: String(item?.tamanho || '').trim(),
+        quantidade: String(item?.quantidade || '').trim(),
+        produto: String(item?.produto || item?.descricao || '').trim(),
+        detalhes: String(item?.detalhesProduto || item?.detalhes || '').trim()
+      }))
+      : (() => {
+        const lista = [];
+        document.querySelectorAll('#produtosTable tr').forEach(row => {
+          lista.push({
+            tamanho: String(row.querySelector('.tamanho')?.value || '').trim(),
+            quantidade: String(row.querySelector('.quantidade')?.value || '').trim(),
+            produto: String(row.querySelector('.produto')?.value || row.querySelector('.descricao')?.value || '').trim(),
+            detalhes: String(row.querySelector('.detalhes-produto')?.value || '').trim()
+          });
+        });
+        return lista;
+      })();
+
+    const normalizarChaveProdutoImpressao = valor => String(valor || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+    const produtosUnicosImpressao = new Set(
+      registrosProdutosImpressao
+        .map(item => normalizarChaveProdutoImpressao(item?.produto || ''))
+        .filter(Boolean)
+    );
+    const descricoesUnicasImpressao = new Set(
+      registrosProdutosImpressao
+        .map(item => normalizarChaveProdutoImpressao(item?.detalhes || ''))
+        .filter(Boolean)
+    );
+    const aplicarCoresImpressao = produtosUnicosImpressao.size > 1 || descricoesUnicasImpressao.size > 1;
+    const usarDescricaoComoReferenciaCor = aplicarCoresImpressao && descricoesUnicasImpressao.size > 1;
+    const obterReferenciaCorImpressao = item => {
+      if (!usarDescricaoComoReferenciaCor) return String(item?.produto || '').trim();
+      const descricao = String(item?.detalhes || '').trim();
+      if (descricao) return descricao;
+      return String(item?.produto || '').trim();
+    };
+    const catalogoCoresImpressao = [
+      { nome: 'Preto', hex: '#1F1F1F', chaves: ['preto', 'preta'] },
+      { nome: 'Branco', hex: '#C4C8CE', chaves: ['branco', 'branca', 'white'] },
+      { nome: 'Azul Royal', hex: '#2F5DA8', chaves: ['azul royal', 'royal'] },
+      { nome: 'Azul Marinho', hex: '#1F3A63', chaves: ['azul marinho', 'marinho'] },
+      { nome: 'Azul Turquesa', hex: '#2D8C94', chaves: ['azul turquesa', 'turquesa'] },
+      { nome: 'Azul Celeste', hex: '#7FB7D9', chaves: ['azul celeste', 'celeste'] },
+      { nome: 'Azul Petróleo', hex: '#2C5F6D', chaves: ['azul petroleo', 'petroleo'] },
+      { nome: 'Cinza Mescla', hex: '#8B8F94', chaves: ['cinza mescla', 'mescla cinza'] },
+      { nome: 'Cinza Chumbo', hex: '#5D636A', chaves: ['cinza chumbo', 'chumbo'] },
+      { nome: 'Cinza Médio', hex: '#7A8087', chaves: ['cinza medio', 'cinza'] },
+      { nome: 'Verde Bandeira', hex: '#1F6B43', chaves: ['verde bandeira'] },
+      { nome: 'Verde Musgo', hex: '#5D6B3A', chaves: ['verde musgo', 'musgo'] },
+      { nome: 'Verde Limão', hex: '#8AAA3A', chaves: ['verde limao', 'limao'] },
+      { nome: 'Verde Jade', hex: '#3F8B73', chaves: ['verde jade', 'jade'] },
+      { nome: 'Verde Claro', hex: '#8DBB8A', chaves: ['verde claro'] },
+      { nome: 'Amarelo Canário', hex: '#D6B22E', chaves: ['amarelo canario', 'amarela canario', 'canario'] },
+      { nome: 'Amarelo Ouro', hex: '#B58A1F', chaves: ['amarelo ouro', 'amarela ouro', 'ouro'] },
+      { nome: 'Rosa Pink', hex: '#B44B7A', chaves: ['rosa pink', 'pink'] },
+      { nome: 'Rosa Bebê', hex: '#D8A8BD', chaves: ['rosa bebe', 'bebe'] },
+      { nome: 'Roxo', hex: '#6A568A', chaves: ['roxo', 'roxa'] },
+      { nome: 'Lilás', hex: '#9A88B8', chaves: ['lilas'] },
+      { nome: 'Vermelho', hex: '#A54A4A', chaves: ['vermelho', 'vermelha'] },
+      { nome: 'Bordô', hex: '#6C3942', chaves: ['bordo'] },
+      { nome: 'Marsala', hex: '#7A4A4E', chaves: ['marsala'] },
+      { nome: 'Bege', hex: '#B7A98D', chaves: ['bege'] },
+      { nome: 'Caqui', hex: '#9A8F65', chaves: ['caqui', 'cáqui', 'khaki'] },
+      { nome: 'Royal Mescla', hex: '#6C7EA0', chaves: ['royal mescla', 'mescla royal'] },
+      { nome: 'Marinho Mescla', hex: '#5A677D', chaves: ['marinho mescla', 'mescla marinho'] },
+      { nome: 'Chumbo Mescla', hex: '#697079', chaves: ['chumbo mescla', 'mescla chumbo'] },
+      { nome: 'Jeans', hex: '#4C6C8A', chaves: ['jeans'] },
+      { nome: 'Ultramarine', hex: '#3E5FA0', chaves: ['ultramarine', 'ultramarino'] },
+      { nome: 'Cobalto', hex: '#3C5E96', chaves: ['cobalto'] },
+      { nome: 'Marinho', hex: '#233E68', chaves: ['marinho'] },
+      { nome: 'Off-White', hex: '#E8E3D6', chaves: ['off-white', 'off white', 'offwhite'] },
+      { nome: 'Salmão', hex: '#C98D7A', chaves: ['salmao'] },
+      { nome: 'Grafite', hex: '#4E555D', chaves: ['grafite'] },
+      { nome: 'Dourado', hex: '#B39852', chaves: ['dourado', 'dourada'] }
+    ];
+    const mapaCoresPorNomeNormalizado = new Map(
+      catalogoCoresImpressao.map(item => [normalizarChaveProdutoImpressao(item.nome), item.hex])
+    );
+    const encontrarCorPorTexto = textoReferencia => {
+      const texto = normalizarChaveProdutoImpressao(textoReferencia);
+      if (!texto) return '';
+
+      let melhorHex = '';
+      let melhorTamanho = -1;
+
+      catalogoCoresImpressao.forEach(cor => {
+        cor.chaves.forEach(chaveRaw => {
+          const chave = normalizarChaveProdutoImpressao(chaveRaw);
+          if (!chave) return;
+          if (texto.includes(chave) && chave.length > melhorTamanho) {
+            melhorHex = cor.hex;
+            melhorTamanho = chave.length;
+          }
+        });
+      });
+
+      if (melhorHex) return melhorHex;
+
+      if (texto.includes('azul')) return mapaCoresPorNomeNormalizado.get('azul royal') || '';
+      if (texto.includes('pret')) return mapaCoresPorNomeNormalizado.get('preto') || '';
+      if (texto.includes('branc')) return mapaCoresPorNomeNormalizado.get('branco') || '';
+      if (texto.includes('verde')) return mapaCoresPorNomeNormalizado.get('verde bandeira') || '';
+      if (texto.includes('cinza') || texto.includes('chumbo') || texto.includes('grafite')) {
+        return mapaCoresPorNomeNormalizado.get('cinza medio') || mapaCoresPorNomeNormalizado.get('grafite') || '';
+      }
+      if (texto.includes('amarel') || texto.includes('ouro') || texto.includes('dourad')) {
+        return mapaCoresPorNomeNormalizado.get('amarelo ouro') || mapaCoresPorNomeNormalizado.get('dourado') || '';
+      }
+      if (texto.includes('rosa') || texto.includes('pink')) return mapaCoresPorNomeNormalizado.get('rosa pink') || '';
+      if (texto.includes('rox') || texto.includes('lilas')) return mapaCoresPorNomeNormalizado.get('roxo') || '';
+      if (texto.includes('vermelh') || texto.includes('bordo') || texto.includes('marsala')) {
+        return mapaCoresPorNomeNormalizado.get('vermelho') || '';
+      }
+      if (texto.includes('caqui') || texto.includes('khaki')) {
+        return mapaCoresPorNomeNormalizado.get('caqui') || '';
+      }
+      if (texto.includes('bege') || texto.includes('off white') || texto.includes('off-white') || texto.includes('offwhite')) {
+        return mapaCoresPorNomeNormalizado.get('bege') || mapaCoresPorNomeNormalizado.get('off-white') || '';
+      }
+
+      return '';
+    };
+    const paletaFallbackDistincao = ['#4C6A8A', '#8A6A4C', '#4C7A6E', '#6E5E8A', '#8A5E66', '#5E7A8A'];
+    const coresPorProdutoImpressao = new Map();
+    const obterCorProdutoImpressao = referencia => {
+      const chave = normalizarChaveProdutoImpressao(referencia);
+      if (!chave) return '';
+      if (!coresPorProdutoImpressao.has(chave)) {
+        let cor = encontrarCorPorTexto(chave);
+        if (!cor) {
+          cor = paletaFallbackDistincao[coresPorProdutoImpressao.size % paletaFallbackDistincao.length];
+        }
+        coresPorProdutoImpressao.set(chave, cor);
+      }
+      return coresPorProdutoImpressao.get(chave) || '';
+    };
+    const totaisPorProdutoImpressao = new Map();
+    let totalItensImpressao = 0;
 
     const printBody = document.getElementById('print-produtosTable');
     if (printBody) {
       printBody.innerHTML = '';
 
-      if (usarFichaDireta) {
-        produtosFonte.forEach(item => {
-          const tamanho = String(item?.tamanho || '').trim();
-          const quantidade = String(item?.quantidade || '').trim();
-          const produto = String(item?.produto || item?.descricao || '').trim();
-          const detalhesProduto = String(item?.detalhesProduto || item?.detalhes || '').trim();
+      registrosProdutosImpressao.forEach(item => {
+        const tamanho = item.tamanho;
+        const quantidade = item.quantidade;
+        const produto = item.produto;
+        const detalhesProduto = item.detalhes;
 
-          const produtoFormatado = capitalizeFirstLetter(produto);
-          const detalhesFormatado = capitalizeFirstLetter(detalhesProduto);
-          if (!tamanho && !quantidade && !produtoFormatado && !detalhesFormatado) return;
+        const produtoFormatado = capitalizeFirstLetter(produto);
+        const detalhesFormatado = capitalizeFirstLetter(detalhesProduto);
+        if (!tamanho && !quantidade && !produtoFormatado && !detalhesFormatado) return;
 
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${tamanho || '-'}</td>
-            <td>${quantidade || '-'}</td>
-            <td>${produtoFormatado || '-'}</td>
-            <td>${detalhesFormatado || '-'}</td>
-          `;
-          printBody.appendChild(tr);
-        });
-      } else {
-        document.querySelectorAll('#produtosTable tr').forEach(row => {
-          const tamanho = row.querySelector('.tamanho')?.value;
-          const quantidade = row.querySelector('.quantidade')?.value;
-          const produto = row.querySelector('.produto')?.value || row.querySelector('.descricao')?.value;
-          const detalhesProduto = row.querySelector('.detalhes-produto')?.value;
-          const produtoFormatado = capitalizeFirstLetter(produto);
-          const detalhesFormatado = capitalizeFirstLetter(detalhesProduto);
-          if (!tamanho && !quantidade && !produtoFormatado && !detalhesFormatado) return;
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${tamanho || '-'}</td>
-            <td>${quantidade || '-'}</td>
-            <td>${produtoFormatado || '-'}</td>
-            <td>${detalhesFormatado || '-'}</td>
-          `;
-          printBody.appendChild(tr);
-        });
-      }
+        const qtdNumero = parseInt(quantidade, 10);
+        if (!Number.isNaN(qtdNumero) && qtdNumero > 0) {
+          totalItensImpressao += qtdNumero;
+          const chaveAgrupamento = normalizarChaveProdutoImpressao(produto);
+          if (chaveAgrupamento) {
+            const acumulado = totaisPorProdutoImpressao.get(chaveAgrupamento) || {
+              nome: produtoFormatado || produto,
+              quantidade: 0,
+              cor: obterCorProdutoImpressao(produto)
+            };
+            acumulado.quantidade += qtdNumero;
+            totaisPorProdutoImpressao.set(chaveAgrupamento, acumulado);
+          }
+        }
+
+        const tr = document.createElement('tr');
+        const tdTamanho = document.createElement('td');
+        tdTamanho.textContent = tamanho || '-';
+
+        const tdQuantidade = document.createElement('td');
+        tdQuantidade.textContent = quantidade || '-';
+
+        const tdProduto = document.createElement('td');
+        tdProduto.textContent = produtoFormatado || '-';
+        const referenciaCorLinha = obterReferenciaCorImpressao(item);
+        const corProduto = aplicarCoresImpressao
+          ? obterCorProdutoImpressao(referenciaCorLinha)
+          : '';
+        if (aplicarCoresImpressao && corProduto) {
+          tdProduto.style.color = corProduto;
+          tdProduto.style.fontWeight = '700';
+        }
+
+        const tdDetalhes = document.createElement('td');
+        tdDetalhes.textContent = detalhesFormatado || '-';
+        if (aplicarCoresImpressao && corProduto) {
+          tdDetalhes.style.fontWeight = '700';
+        }
+        if (aplicarCoresImpressao && usarDescricaoComoReferenciaCor && corProduto) {
+          tdDetalhes.style.color = corProduto;
+        }
+
+        tr.appendChild(tdTamanho);
+        tr.appendChild(tdQuantidade);
+        tr.appendChild(tdProduto);
+        tr.appendChild(tdDetalhes);
+        printBody.appendChild(tr);
+      });
     }
 
-    const totalItensDireto = usarFichaDireta
-      ? produtosFonte.reduce((total, item) => total + (parseInt(String(item?.quantidade || ''), 10) || 0), 0)
-      : null;
-    setText(
-      'print-totalItens',
-      usarFichaDireta ? String(totalItensDireto) : (document.getElementById('totalItens')?.textContent || '0'),
-      '0'
-    );
+    setText('print-totalItens', String(totalItensImpressao), '0');
+
+    const resumoProdutosPrintEl = document.getElementById('print-totalProdutosPorTipo');
+    if (resumoProdutosPrintEl) {
+      resumoProdutosPrintEl.innerHTML = '';
+      Array.from(totaisPorProdutoImpressao.values())
+        .filter(item => item.quantidade > 0)
+        .sort((a, b) => b.quantidade - a.quantidade)
+        .forEach(item => {
+          const itemEl = document.createElement('span');
+          itemEl.className = 'print-total-produto-item';
+
+          const nomeEl = document.createElement('span');
+          nomeEl.className = 'print-total-produto-nome';
+          nomeEl.textContent = item.nome;
+
+          const qtdEl = document.createElement('span');
+          qtdEl.className = 'print-total-produto-qtd';
+          qtdEl.textContent = `(${item.quantidade})`;
+
+          itemEl.appendChild(nomeEl);
+          itemEl.appendChild(qtdEl);
+          resumoProdutosPrintEl.appendChild(itemEl);
+        });
+    }
 
     const materialVal = getValorCampo('material');
     setText('print-material', materialVal, '-');
@@ -2332,19 +2628,9 @@
     const corMaterialVal = getValorCampo('corMaterial');
     setText('print-corMaterial', corMaterialVal, '-');
 
-    const produtosPreenchidosImpressao = usarFichaDireta
-      ? produtosFonte
-        .map(item => String(item?.produto || item?.descricao || '').trim())
-        .filter(Boolean)
-      : (() => {
-        const lista = [];
-        const rows = document.querySelectorAll('#produtosTable tr');
-        rows.forEach(row => {
-          const valor = String(row.querySelector('.produto')?.value || row.querySelector('.descricao')?.value || '').trim();
-          if (valor) lista.push(valor);
-        });
-        return lista;
-      })();
+    const produtosPreenchidosImpressao = registrosProdutosImpressao
+      .map(item => String(item?.produto || '').trim())
+      .filter(Boolean);
     const isRegataImpressao = produtosPreenchidosImpressao.length > 0
       && produtosPreenchidosImpressao.every(produtoEhRegata);
 
@@ -2549,11 +2835,13 @@
     if (normal && printV) {
       normal.style.display = 'none';
       printV.style.display = 'block';
+      aplicarAjusteAlturaImagensPorObservacoes();
       await aguardarImagensDaImpressao();
       aplicarModoCompactoSeNecessario();
 
       if (apenasPreview) {
         document.body.classList.add('preview-impressao');
+        aplicarAjusteAlturaImagensPorObservacoes();
         aplicarModoCompactoSeNecessario();
         if (window.parent && window.parent !== window) {
           const params = new URLSearchParams(window.location.search);
@@ -3077,6 +3365,20 @@
 
     function monitorarCampos() {
       if (modoSomenteLeitura) return;
+
+      const ehCampoMonitoravel = (alvo) => {
+        if (!alvo || !(alvo instanceof Element)) return false;
+        return !!alvo.closest('input:not([type="submit"]):not([type="button"]), textarea, select, [contenteditable="true"]');
+      };
+
+      document.addEventListener('input', evento => {
+        if (ehCampoMonitoravel(evento.target)) marcarDadosNaoSalvos();
+      }, true);
+
+      document.addEventListener('change', evento => {
+        if (ehCampoMonitoravel(evento.target)) marcarDadosNaoSalvos();
+      }, true);
+
       document.querySelectorAll('input:not([type="submit"]):not([type="button"]), textarea, select, [contenteditable="true"]')
         .forEach(campo => {
           campo.addEventListener('input', marcarDadosNaoSalvos);

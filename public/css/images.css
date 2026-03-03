@@ -237,14 +237,14 @@
 
 .print-image-item img {
   max-width: 100%;
-  max-height: 280px;
+  max-height: clamp(120px, calc(280px - (var(--obs-extra-lines, 0) * 24px)), 280px);
   object-fit: contain;
   border: 1px solid var(--color-light-1);
   border-radius: var(--radius-md);
 }
 
 .print-image-item.single img {
-  max-height: 400px;
+  max-height: clamp(160px, calc(400px - (var(--obs-extra-lines, 0) * 30px)), 400px);
 }
 
 .print-image-description {
@@ -260,7 +260,7 @@
 }
 
 .print-images-container.compact-four .print-image-item img {
-  max-height: 200px;
+  max-height: clamp(104px, calc(200px - (var(--obs-extra-lines, 0) * 18px)), 200px);
 }
 
 #print-imagesSection:has(.print-images-container:empty) {
@@ -291,12 +291,12 @@
     width: auto;
     height: auto;
     max-width: 100%;
-    max-height: 55mm;
+    max-height: clamp(26mm, calc(55mm - (var(--obs-extra-lines, 0) * 4mm)), 55mm);
     object-fit: contain;
   }
 
   .print-image-item.single img {
-    max-height: 90mm;
+    max-height: clamp(36mm, calc(90mm - (var(--obs-extra-lines, 0) * 5.5mm)), 90mm);
   }
 
   .print-images-container.images-two {
@@ -304,7 +304,7 @@
   }
 
   .print-images-container.images-two .print-image-item img {
-    max-height: 55mm;
+    max-height: clamp(26mm, calc(55mm - (var(--obs-extra-lines, 0) * 4mm)), 55mm);
   }
 
   .print-images-container.compact-four {
@@ -313,7 +313,7 @@
   }
 
   .print-images-container.compact-four .print-image-item img {
-    max-height: 40mm;
+    max-height: clamp(20mm, calc(40mm - (var(--obs-extra-lines, 0) * 3mm)), 40mm);
   }
 }
 

@@ -1657,6 +1657,7 @@ body.preview-impressao .print-table th {
   color: var(--preview-table-head-text);
 }
 
+
 body.preview-impressao .print-total {
   margin-top: var(--space-8);
   display: inline-flex;
@@ -1669,6 +1670,35 @@ body.preview-impressao .print-total {
   color: var(--preview-text);
   font-weight: 700;
   box-shadow: var(--shadow-xs);
+}
+
+body.preview-impressao .print-total-produtos {
+  margin-top: var(--space-6);
+  margin-left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+body.preview-impressao .print-total-produto-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--preview-table-border);
+  background: rgba(15, 23, 42, 0.04);
+  font-size: 0.72rem;
+}
+
+body.preview-impressao .print-total-produto-nome {
+  color: var(--produto-print-color, var(--preview-text));
+  font-weight: 700;
+}
+
+body.preview-impressao .print-total-produto-qtd {
+  color: var(--preview-muted);
+  font-weight: 600;
 }
 
 
@@ -1851,6 +1881,35 @@ body.preview-impressao .print-observacoes {
     line-height: 1;
   }
 
+  .print-total-produtos {
+    margin-top: 0.8mm;
+    margin-left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45mm;
+  }
+
+  .print-total-produto-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35mm;
+    padding: 0.35mm 1mm;
+    border: 0.25mm solid var(--color-dark-4);
+    border-radius: 999px;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .print-total-produto-nome {
+    color: var(--produto-print-color, var(--color-dark-1));
+    font-weight: 700;
+  }
+
+  .print-total-produto-qtd {
+    color: var(--color-dark-4);
+    font-weight: 600;
+  }
+
 
   .print-observacoes {
     min-height: 10mm;
@@ -1954,6 +2013,18 @@ body.preview-impressao .print-observacoes {
     font-size: calc(14px * var(--print-compact-scale));
     padding: calc(0.9mm * var(--print-compact-scale)) calc(2.2mm * var(--print-compact-scale));
     gap: calc(1.2mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-total-produtos {
+    margin-top: calc(0.8mm * var(--print-compact-scale));
+    margin-left: 0;
+    gap: calc(0.45mm * var(--print-compact-scale));
+  }
+
+  #print-version.print-compact .print-total-produto-item {
+    padding: calc(0.35mm * var(--print-compact-scale)) calc(1mm * var(--print-compact-scale));
+    font-size: calc(11px * var(--print-compact-scale));
+    gap: calc(0.35mm * var(--print-compact-scale));
   }
 
 
