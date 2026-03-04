@@ -2200,35 +2200,49 @@ app.get('/api/relatorio-clientes', async (req, res) => {
     const offset = Number(queryData.offset) || 0;
     const termo = String(queryData.query || '').trim();
 
-    const where = [];
-    const params = [];
-    if (termo) {
-      where.push('lower(c.nome) LIKE lower(?)');
-      params.push(`%${termo}%`);
+    let rows = [];
+    let total = 0;
+
+    if (!termo) {
+      const totalRow = await dbGet('SELECT COUNT(*) as total FROM clientes');
+      total = Number(totalRow?.total || 0);
+
+      rows = await dbAll(
+        `
+        SELECT
+          c.id,
+          c.nome,
+          c.primeiro_pedido,
+          c.ultimo_pedido,
+          c.total_pedidos
+        FROM clientes c
+        ORDER BY c.ultimo_pedido DESC, c.nome ASC
+        LIMIT ? OFFSET ?
+        `,
+        [limit, offset]
+      );
+    } else {
+      const termoNormalizado = normalizarTextoBusca(termo);
+      const allRows = await dbAll(
+        `
+        SELECT
+          c.id,
+          c.nome,
+          c.primeiro_pedido,
+          c.ultimo_pedido,
+          c.total_pedidos
+        FROM clientes c
+        ORDER BY c.ultimo_pedido DESC, c.nome ASC
+        `
+      );
+
+      const filtrados = allRows.filter(item => (
+        normalizarTextoBusca(item?.nome || '').includes(termoNormalizado)
+      ));
+
+      total = filtrados.length;
+      rows = filtrados.slice(offset, offset + limit);
     }
-    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-
-    const totalRow = await dbGet(
-      `SELECT COUNT(*) as total FROM clientes c ${whereSql}`,
-      params
-    );
-    const total = Number(totalRow?.total || 0);
-
-    const rows = await dbAll(
-      `
-      SELECT
-        c.id,
-        c.nome,
-        c.primeiro_pedido,
-        c.ultimo_pedido,
-        c.total_pedidos
-      FROM clientes c
-      ${whereSql}
-      ORDER BY c.ultimo_pedido DESC, c.nome ASC
-      LIMIT ? OFFSET ?
-      `,
-      [...params, limit, offset]
-    );
 
     res.json({
       items: rows.map(item => ({

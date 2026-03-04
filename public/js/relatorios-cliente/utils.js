@@ -74,4 +74,3 @@ export function isValidRange(dataInicio, dataFim) {
   if (!dataInicio || !dataFim) return false;
   return dataInicio <= dataFim;
 }
-
