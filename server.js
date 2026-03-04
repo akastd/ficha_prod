@@ -3471,25 +3471,40 @@ app.get('*', (req, res) => {
   }
 });
 
-// Iniciar servidor
-initDatabase().then(() => {
-  const server = app.listen(PORT, () => {
-    console.log('Servidor rodando em http://localhost:' + PORT);
-    console.log('Banco de dados: Turso (LibSQL)');
-    console.log('Cloudinary: ' + CLOUDINARY_CONFIG.cloudName);
-    console.log('Encoding UTF-8 configurado');
-  });
+// Bootstrap da aplicação (suporta ambiente serverless e execução local)
+let databaseInitPromise = null;
 
-  server.on('error', (error) => {
-    if (error && error.code === 'EADDRINUSE') {
-      console.error(`Porta ${PORT} já está em uso. Finalize o processo atual ou ajuste PORT no .env.`);
+function ensureDatabaseInitialized() {
+  if (!databaseInitPromise) {
+    databaseInitPromise = initDatabase();
+  }
+  return databaseInitPromise;
+}
+
+export default app;
+
+if (process.env.VERCEL) {
+  await ensureDatabaseInitialized();
+} else {
+  ensureDatabaseInitialized().then(() => {
+    const server = app.listen(PORT, () => {
+      console.log('Servidor rodando em http://localhost:' + PORT);
+      console.log('Banco de dados: Turso (LibSQL)');
+      console.log('Cloudinary: ' + CLOUDINARY_CONFIG.cloudName);
+      console.log('Encoding UTF-8 configurado');
+    });
+
+    server.on('error', (error) => {
+      if (error && error.code === 'EADDRINUSE') {
+        console.error(`Porta ${PORT} já está em uso. Finalize o processo atual ou ajuste PORT no .env.`);
+        process.exit(1);
+      }
+      console.error('Erro ao iniciar servidor HTTP:', error);
       process.exit(1);
-    }
-    console.error('Erro ao iniciar servidor HTTP:', error);
+    });
+  }).catch(error => {
+    console.error('Falha ao iniciar servidor:', error);
     process.exit(1);
   });
-}).catch(error => {
-  console.error('Falha ao iniciar servidor:', error);
-  process.exit(1);
-});
+}
 
