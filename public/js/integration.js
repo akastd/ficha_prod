@@ -247,7 +247,7 @@
       icone: 'fa-house',
       texto: 'In\u00EDcio',
       onClick: () => {
-        window.location.href = 'index.html';
+        window.location.href = '/';
       }
     };
 
@@ -260,7 +260,7 @@
         icone: 'fa-edit',
         texto: 'Editar',
         onClick: () => {
-          window.location.href = `ficha.html?editar=${fichaAtualId}`;
+          window.location.href = `/ficha?editar=${fichaAtualId}`;
         }
       });
       botoes.push({
@@ -269,7 +269,7 @@
         icone: 'fa-chart-line',
         texto: 'Painel de Controle',
         onClick: () => {
-          window.location.href = 'dashboard.html';
+          window.location.href = '/dashboard';
         },
         alinharDireita: true
       });
@@ -308,7 +308,7 @@
         icone: 'fa-chart-line',
         texto: 'Painel de Controle',
         onClick: () => {
-          window.location.href = 'dashboard.html';
+          window.location.href = '/dashboard';
         },
         alinharDireita: true
       });
@@ -319,7 +319,7 @@
         icone: 'fa-plus',
         texto: 'Nova Ficha',
         onClick: () => {
-          window.location.href = 'ficha.html';
+          window.location.href = '/ficha';
         }
       });
     } else {
@@ -349,7 +349,7 @@
         icone: 'fa-chart-line',
         texto: 'Painel de Controle',
         onClick: () => {
-          window.location.href = 'dashboard.html';
+          window.location.href = '/dashboard';
         },
         alinharDireita: true
       });
@@ -800,7 +800,7 @@
     const salvo = salvarRascunhoDuplicacao(dados);
     if (!salvo) return false;
 
-    window.location.href = 'ficha.html?duplicar=1';
+    window.location.href = '/ficha?duplicar=1';
     return true;
   }
 
@@ -844,7 +844,7 @@
           'ficha_duplicada',
           'Ficha duplicada',
           Number.isInteger(fichaOrigemId) && fichaOrigemId > 0 ? fichaOrigemId : null,
-          { origem: 'ficha.html' }
+          { origem: '/ficha' }
         );
       }
 
@@ -1180,7 +1180,7 @@
 
       if (!fichaBanco) {
         mostrarToast('Ficha não encontrada', 'error');
-        window.location.href = 'dashboard.html';
+        window.location.href = '/dashboard';
         return;
       }
 
@@ -1207,7 +1207,7 @@
 
       if (!fichaBanco) {
         mostrarToast('Ficha não encontrada', 'error');
-        window.location.href = 'dashboard.html';
+        window.location.href = '/dashboard';
         return;
       }
 

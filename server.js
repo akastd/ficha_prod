@@ -3630,12 +3630,34 @@ app.get('/api/relatorio/eficiencia', async (req, res) => {
   }
 });
 
+const PAGE_ROUTE_TO_FILE = Object.freeze({
+  '/': 'index.html',
+  '/index': 'index.html',
+  '/dashboard': 'dashboard.html',
+  '/ficha': 'ficha.html',
+  '/clientes': 'clientes.html',
+  '/kanban': 'kanban.html',
+  '/relatorios': 'relatorios.html',
+  '/relatorios-cliente': 'relatorios_cliente.html',
+  '/relatorios_cliente': 'relatorios_cliente.html',
+  '/design-system': 'design-system.html',
+  '/offline': 'offline.html'
+});
+
+function normalizePagePath(pathname) {
+  if (!pathname || pathname === '/') return '/';
+  return pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+}
+
 // Rota catch-all
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Rota de API não encontrada' });
   }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+
+  const pagePath = normalizePagePath(req.path);
+  const pageFile = PAGE_ROUTE_TO_FILE[pagePath] || 'index.html';
+  res.sendFile(path.join(__dirname, 'public', pageFile));
 });
 
 // Bootstrap da aplicação (suporta ambiente serverless e execução local)

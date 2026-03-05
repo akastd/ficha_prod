@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'app-shell-v8';
+const CACHE_VERSION = 'app-shell-v9';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const API_CACHE = `api-${CACHE_VERSION}`;
@@ -6,12 +6,19 @@ const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_URLS = [
   '/',
+  '/dashboard',
+  '/ficha',
+  '/clientes',
+  '/kanban',
+  '/relatorios',
+  '/relatorios-cliente',
   '/index.html',
   '/ficha.html',
   '/dashboard.html',
   '/clientes.html',
   '/kanban.html',
   '/relatorios.html',
+  '/relatorios_cliente.html',
   OFFLINE_URL,
   '/manifest.webmanifest',
   '/icons/icon-192.png',

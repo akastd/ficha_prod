@@ -529,7 +529,7 @@
         : '';
 
       return `
-        <a class="home-upcoming-item" href="ficha.html?visualizar=${id}" data-id="${id}">
+        <a class="home-upcoming-item" href="/ficha?visualizar=${id}" data-id="${id}">
           <div class="home-upcoming-main">
             <strong>${cliente}</strong>
             <span class="home-upcoming-sub">Ficha #${id} • Entrega: ${entrega}</span>
@@ -666,7 +666,7 @@
     }
 
     if (action === 'abrir') {
-      window.location.href = `ficha.html?fallbackLocal=${encodeURIComponent(id)}`;
+      window.location.href = `/ficha?fallbackLocal=${encodeURIComponent(id)}`;
       return;
     }
 
@@ -738,7 +738,7 @@
     previewFichaId = fichaId;
     if (previewTitle) previewTitle.textContent = `#${fichaId}`;
     setPreviewLoading(true);
-    previewIframe.src = `ficha.html?visualizar=${fichaId}`;
+    previewIframe.src = `/ficha?visualizar=${fichaId}`;
     previewModal.style.display = 'flex';
     document.body.classList.add('home-preview-modal-open');
   }

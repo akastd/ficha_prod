@@ -448,7 +448,7 @@
       </div>
       <div class="ficha-main">
         <div class="ficha-header">
-          <a class="ficha-cliente ficha-cliente-link" href="ficha.html?visualizar=${ficha.id}" data-id="${ficha.id}" title="Visualizar ficha">
+          <a class="ficha-cliente ficha-cliente-link" href="/ficha?visualizar=${ficha.id}" data-id="${ficha.id}" title="Visualizar ficha">
             ${clienteFormatado || 'Cliente não informado'}
           </a>
           ${diasAtraso > 0 ? `
@@ -804,7 +804,7 @@
     fichaVisualizadaId = id;
     duplicandoFichaModal = false;
     setLoadingPreview(true);
-    iframeVisualizacao.src = `ficha.html?visualizar=${id}`;
+    iframeVisualizacao.src = `/ficha?visualizar=${id}`;
     if (tituloModalVisualizacao) tituloModalVisualizacao.textContent = `#${id}`;
     modalVisualizacao.style.display = 'flex';
     document.body.classList.add('preview-modal-open');
@@ -1060,7 +1060,7 @@
         window.SystemLog.track('ficha_duplicada', 'Ficha duplicada', Number(fichaVisualizadaId) || null, { origem: 'dashboard_modal' });
       }
 
-      window.location.href = 'ficha.html?duplicar=1';
+      window.location.href = '/ficha?duplicar=1';
     } catch (error) {
       console.error('Erro ao duplicar ficha pelo modal:', error);
       mostrarErro('Erro ao duplicar ficha');
@@ -1074,7 +1074,7 @@
   }
 
   function editarFicha(id) {
-    window.location.href = `ficha.html?editar=${id}`;
+    window.location.href = `/ficha?editar=${id}`;
   }
 
   async function marcarComoEntregue(id) {

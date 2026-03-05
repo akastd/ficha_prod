@@ -687,6 +687,23 @@
     tabelaBody.addEventListener('dragover', handleDragOver);
     tabelaBody.addEventListener('dragleave', handleDragLeave);
     tabelaBody.addEventListener('drop', handleDrop);
+    document.addEventListener('mouseup', handleGlobalMouseUp, true);
+  }
+
+  function resetDragState() {
+    document.querySelectorAll('#produtosTable tr').forEach(tr => {
+      tr.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+      tr.style.opacity = '1';
+      tr.draggable = false;
+    });
+    draggedRow = null;
+    dropPosition = null;
+    isDragging = false;
+  }
+
+  function handleGlobalMouseUp() {
+    if (!isDragging && !draggedRow) return;
+    resetDragState();
   }
 
   function handleMouseDown(e) {
@@ -697,8 +714,7 @@
       row.draggable = true;
       isDragging = true;
     } else if (row) {
-      row.draggable = false;
-      isDragging = false;
+      resetDragState();
     }
   }
 
@@ -722,21 +738,7 @@
   }
 
   function handleDragEnd(e) {
-    const row = e.target.closest('tr');
-    if (row) {
-      row.classList.remove('dragging');
-      row.style.opacity = '1';
-      row.draggable = false;
-    }
-
-    document.querySelectorAll('#produtosTable tr').forEach(tr => {
-      tr.classList.remove('drag-over-top', 'drag-over-bottom');
-      tr.draggable = false;
-    });
-
-    draggedRow = null;
-    dropPosition = null;
-    isDragging = false;
+    resetDragState();
   }
 
   function handleDragOver(e) {
@@ -878,11 +880,27 @@
     const tabelaBody = document.getElementById('produtosTable');
     const template = document.getElementById('productRowTemplate');
     const btnAdicionar = document.getElementById('adicionarProduto');
+    const btnDuplicarProduto = document.getElementById('duplicarProduto');
+    let linhaSelecionada = null;
 
     if (!tabelaBody || !template || !btnAdicionar) return;
 
     initDragAndDrop(tabelaBody);
     adicionarBotaoOrdenar();
+
+    function selecionarLinhaProduto(row) {
+      if (!row || !tabelaBody.contains(row)) return;
+      tabelaBody.querySelectorAll('tr.is-selected').forEach(tr => tr.classList.remove('is-selected'));
+      row.classList.add('is-selected');
+      linhaSelecionada = row;
+    }
+
+    function obterLinhaSelecionadaValida() {
+      if (linhaSelecionada && tabelaBody.contains(linhaSelecionada)) {
+        return linhaSelecionada;
+      }
+      return null;
+    }
 
     function getPrimeiroProdutoPreenchido() {
       const rows = Array.from(tabelaBody.querySelectorAll('tr'));
@@ -967,7 +985,10 @@
       }
     }
 
-    function adicionarLinhaProduto(produto) {
+    function adicionarLinhaProduto(produto, options = {}) {
+      const insertAfterRow = options.insertAfterRow && tabelaBody.contains(options.insertAfterRow)
+        ? options.insertAfterRow
+        : null;
       const row = template.content.firstElementChild.cloneNode(true);
       row.draggable = false;
 
@@ -1017,35 +1038,88 @@
         if (inputDetalhesProduto) inputDetalhesProduto.value = detalhesProduto;
       }
 
-      tabelaBody.appendChild(row);
+      if (insertAfterRow) {
+        tabelaBody.insertBefore(row, insertAfterRow.nextSibling);
+      } else {
+        tabelaBody.appendChild(row);
+      }
       atualizarTotalItens();
       aplicarRegrasAutomaticasDoPrimeiroProduto();
+      if (!obterLinhaSelecionadaValida()) {
+        selecionarLinhaProduto(row);
+      }
+      return row;
+    }
+
+    function extrairDadosLinhaProduto(row) {
+      if (!row) return null;
+      return {
+        tamanho: row.querySelector('.tamanho')?.value || '',
+        quantidade: row.querySelector('.quantidade')?.value || 1,
+        produto: row.querySelector('.produto')?.value || row.querySelector('.descricao')?.value || '',
+        detalhesProduto: row.querySelector('.detalhes-produto')?.value || ''
+      };
+    }
+
+    function duplicarLinhaProduto(row) {
+      const dadosProduto = extrairDadosLinhaProduto(row);
+      if (!dadosProduto) return false;
+      const novaLinha = adicionarLinhaProduto(dadosProduto, { insertAfterRow: row });
+      if (novaLinha) {
+        selecionarLinhaProduto(novaLinha);
+      }
+      return true;
     }
 
     btnAdicionar.addEventListener('click', () => adicionarLinhaProduto());
+    btnDuplicarProduto?.addEventListener('click', () => {
+      const linhaSelecionadaAtual = obterLinhaSelecionadaValida();
+      const linhaAtiva = document.activeElement?.closest?.('#produtosTable tr') || null;
+
+      const linhas = Array.from(tabelaBody.querySelectorAll('tr'));
+      const ultimaLinha = linhas.length ? linhas[linhas.length - 1] : null;
+      const linhaBase = linhaSelecionadaAtual || linhaAtiva || ultimaLinha;
+      if (duplicarLinhaProduto(linhaBase)) return;
+
+      adicionarLinhaProduto();
+    });
 
     tabelaBody.addEventListener('click', e => {
       const btnDuplicar = e.target.closest('.duplicar-produto');
       const btnRemover = e.target.closest('.remover-produto');
+      const linhaClicada = e.target.closest('tr');
+      if (linhaClicada) {
+        selecionarLinhaProduto(linhaClicada);
+      }
 
       if (btnDuplicar) {
         const row = btnDuplicar.closest('tr');
-        const tamanho = row.querySelector('.tamanho')?.value || '';
-        const quantidade = row.querySelector('.quantidade')?.value || 1;
-        const produto = row.querySelector('.produto')?.value || row.querySelector('.descricao')?.value || '';
-        const detalhesProduto = row.querySelector('.detalhes-produto')?.value || '';
-        adicionarLinhaProduto({ tamanho, quantidade, produto, detalhesProduto });
+        duplicarLinhaProduto(row);
       }
 
       if (btnRemover) {
         const row = btnRemover.closest('tr');
         if (row) {
+          if (linhaSelecionada === row) {
+            linhaSelecionada = null;
+          }
           row.remove();
           if (!tabelaBody.querySelector('tr')) {
             adicionarLinhaProduto();
           }
+          const primeiraLinha = tabelaBody.querySelector('tr');
+          if (primeiraLinha) {
+            selecionarLinhaProduto(primeiraLinha);
+          }
           atualizarTotalItens();
         }
+      }
+    });
+
+    tabelaBody.addEventListener('focusin', e => {
+      const row = e.target.closest('tr');
+      if (row) {
+        selecionarLinhaProduto(row);
       }
     });
 
@@ -1140,9 +1214,15 @@
     btnOrdenar.id = 'ordenarProdutos';
     btnOrdenar.type = 'button';
     btnOrdenar.className = 'btn btn-secondary';
-    btnOrdenar.innerHTML = '<i class="fas fa-sort-amount-down"></i> <span>Ordenar</span>';
+    btnOrdenar.innerHTML = '<i class="fas fa-sort-amount-down"></i> <span>Ordenar Automaticamente</span>';
     btnOrdenar.title = 'Ordenar produtos por tamanho';
     btnOrdenar.addEventListener('click', ordenarProdutosPorTamanho);
+
+    const grupoAcoesPrimarias = document.querySelector('.product-actions-primary');
+    if (grupoAcoesPrimarias) {
+      grupoAcoesPrimarias.appendChild(btnOrdenar);
+      return;
+    }
 
     btnAdicionar.parentNode.insertBefore(btnOrdenar, btnAdicionar.nextSibling);
   }

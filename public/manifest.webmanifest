@@ -4,7 +4,7 @@
   "short_name": "Fichas",
   "description": "Sistema de fichas técnicas para produção, clientes e relatórios.",
   "lang": "pt-BR",
-  "start_url": "/index.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -33,7 +33,7 @@
     {
       "name": "Nova Ficha",
       "short_name": "Nova",
-      "url": "/ficha.html",
+      "url": "/ficha",
       "icons": [
         {
           "src": "/favicon.ico",
@@ -45,7 +45,7 @@
     {
       "name": "Dashboard",
       "short_name": "Painel",
-      "url": "/dashboard.html",
+      "url": "/dashboard",
       "icons": [
         {
           "src": "/favicon.ico",

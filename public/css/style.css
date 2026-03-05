@@ -1039,12 +1039,36 @@ textarea.form-control {
     font-size: 0.85rem;
 }
 
+.product-table .form-control.produto,
+.product-table .custom-datalist>.form-control.produto {
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    background: var(--input-bg);
+    color: var(--input-text);
+    box-shadow: none;
+}
+
+.product-table .form-control.produto:focus,
+.product-table .custom-datalist>.form-control.produto:focus {
+    border-color: var(--input-focus);
+    box-shadow: 0 0 0 2px var(--input-focus);
+}
+
 .product-actions-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: var(--space-10);
+    margin-top: var(--space-16);
+    padding-top: var(--space-16);
+    border-top: 1px solid var(--color-border);
     gap: var(--space-10);
+    flex-wrap: wrap;
+}
+
+.product-actions-primary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
     flex-wrap: wrap;
 }
 
@@ -1194,6 +1218,31 @@ textarea.form-control {
 
 .btn-warning:hover {
     background: var(--button-warning-hover);
+}
+
+#adicionarProduto:hover {
+    background: var(--button-brand-bg);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-soft), var(--shadow-sm);
+}
+
+#duplicarProduto {
+    background: transparent;
+    border-color: var(--button-border);
+    color: var(--color-muted);
+    box-shadow: none;
+}
+
+#duplicarProduto:hover {
+    background: var(--button-hover);
+    border-color: var(--button-border);
+    color: var(--button-text);
+    box-shadow: none;
+    transform: none;
+}
+
+#duplicarProduto i {
+    opacity: 0.85;
 }
 
 .btn-icon {

@@ -346,7 +346,7 @@ function abrirModalVisualizacao(id) {
   if (!modalVisualizacao || !iframeVisualizacao) return;
 
   setLoadingPreview(true);
-  iframeVisualizacao.src = `ficha.html?visualizar=${id}`;
+  iframeVisualizacao.src = `/ficha?visualizar=${id}`;
   if (tituloModalVisualizacao) tituloModalVisualizacao.textContent = `#${id}`;
   modalVisualizacao.style.display = 'flex';
   document.body.classList.add('preview-modal-open');

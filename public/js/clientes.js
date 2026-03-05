@@ -499,7 +499,7 @@
   // Ver Fichas
 
   function verFichasCliente(nomeCliente) {
-    window.location.href = `dashboard.html?cliente=${encodeURIComponent(nomeCliente)}`;
+    window.location.href = `/dashboard?cliente=${encodeURIComponent(nomeCliente)}`;
   }
 
   // Utilitários

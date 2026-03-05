@@ -718,7 +718,7 @@
     ui.viewCurrentFichaId = String(fichaId);
     if (ui.viewFichaId) ui.viewFichaId.textContent = `#${fichaId}`;
     setViewModalLoading(true);
-    ui.viewFrame.src = `ficha.html?visualizar=${fichaId}`;
+    ui.viewFrame.src = `/ficha?visualizar=${fichaId}`;
 
     ui.viewModal.hidden = false;
     ui.viewModal.setAttribute('aria-hidden', 'false');
