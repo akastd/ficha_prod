@@ -97,3 +97,108 @@ html[data-theme='dark'] .empty-placeholder--report .empty-placeholder-hint {
     border-radius: var(--radius-lg);
   }
 }
+
+html[data-theme='dark'] body.page-relatorio-clientes {
+  background: var(--color-bg);
+  color: var(--color-neutral-100);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .card {
+  background: var(--color-neutral-900);
+  border-color: var(--color-border);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .card-header {
+  background: var(--color-neutral-900);
+  border-bottom-color: var(--color-border);
+  color: var(--color-neutral-100);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-search-wrap .form-control {
+  background: var(--color-neutral-800);
+  border-color: var(--color-border);
+  color: var(--color-neutral-100);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-search-wrap .form-control::placeholder {
+  color: var(--color-neutral-500);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-list-item {
+  background: var(--color-neutral-900);
+  border-color: var(--color-border);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-list-item:hover {
+  background: var(--color-neutral-800);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-list-item.is-active {
+  background: color-mix(in srgb, var(--color-primary) 20%, var(--color-neutral-900));
+  border-color: var(--color-primary);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-list-name,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-detail-title,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-section h3,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-total-card .value,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-historico-table th,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-historico-table td {
+  color: var(--color-neutral-100);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-kpi-chip,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-period-panel,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-section,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-total-card {
+  background: var(--color-neutral-900);
+  border-color: var(--color-border);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-kpi-chip strong {
+  color: var(--color-neutral-100);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-kpi-label,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-total-card .label,
+html[data-theme='dark'] body.page-relatorio-clientes .empty-placeholder--report p {
+  color: var(--color-neutral-400);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-period-quick-btn {
+  background: var(--color-neutral-800);
+  border-color: var(--color-border);
+  color: var(--color-neutral-200);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-period-quick-btn.is-active {
+  background: color-mix(in srgb, var(--color-primary) 25%, var(--color-neutral-800));
+  border-color: var(--color-primary);
+  color: var(--color-neutral-0);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .tag-metric,
+html[data-theme='dark'] body.page-relatorio-clientes .tag-metric--blue,
+html[data-theme='dark'] body.page-relatorio-clientes .tag-metric--teal {
+  color: var(--color-neutral-0);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-produto-item,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-insight-item,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-historico-table th,
+html[data-theme='dark'] body.page-relatorio-clientes .cliente-historico-table td {
+  border-bottom-color: var(--color-border);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .empty-placeholder--report {
+  border-color: var(--color-border);
+  background: var(--color-neutral-900);
+}
+
+html[data-theme='dark'] body.page-relatorio-clientes .empty-placeholder--report .empty-placeholder-hint {
+  background: var(--color-neutral-800);
+  border-color: var(--color-border);
+  color: var(--color-neutral-200);
+}

@@ -155,7 +155,7 @@
   --card-border: var(--color-border);
   --card-shadow: var(--shadow-sm);
 
-  --modal-bg: var(--color-surface);
+  --modal-bg: rgba(0, 0, 0, 0.7);
   --modal-overlay: var(--color-overlay-heavy);
 
   --toast-bg: var(--color-surface);

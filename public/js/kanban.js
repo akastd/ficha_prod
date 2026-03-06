@@ -24,9 +24,23 @@
   });
 
   const VALID_STATUS = new Set(COLUMN_DEFINITIONS.map(col => col.key));
+  const SUPPLY_STATUS_LABELS = Object.freeze({
+    tudo_ok: 'Tudo ok',
+    sem_tecido: 'Sem tecido',
+    sem_tinta: 'Sem tinta',
+    sem_papel: 'Sem papel',
+    pendencias: 'Pendências'
+  });
+  const VALID_SUPPLY_STATUS = new Set(Object.keys(SUPPLY_STATUS_LABELS));
+  const SUPPLY_STATUS_FLOW = ['tudo_ok', 'sem_tecido', 'sem_tinta', 'sem_papel', 'pendencias'];
+  const VALID_GLOBAL_FILTER_KIND = new Set(['tecido', 'status', 'personalizacao']);
+  const EMPTY_TECIDO_FILTER_VALUE = '__sem_tecido__';
+  const EMPTY_PERSONALIZACAO_FILTER_VALUE = '__sem_personalizacao__';
   const NAME_EXCEPTIONS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
   const UPPERCASE_WORD_PATTERN = /^[A-ZÀ-Ý]{1,4}$/;
   const STORAGE_FILTER_KEY = 'kanban_filters_v1';
+  const STORAGE_MANUAL_CARDS_KEY = 'kanban_manual_cards_v1';
+  const STORAGE_SUPPLY_STATUS_KEY = 'kanban_supply_status_v1';
   const PREVIEW_READY_MESSAGE = 'ficha-preview-ready';
   const TAB_RETURN_REFRESH_MIN_AWAY_MS = 30000;
   const TAB_RETURN_REFRESH_COOLDOWN_MS = 15000;
@@ -36,7 +50,10 @@
     isLoading: false,
     filters: {
       cliente: '',
-      onlyCurrentWeek: false
+      onlyCurrentWeek: false,
+      tecido: '',
+      status: '',
+      personalizacao: ''
     },
     drag: {
       fichaId: null,
@@ -47,6 +64,9 @@
     pendingPersistById: Object.create(null),
     pendingDeliverById: Object.create(null),
     pendingSortByStatus: Object.create(null),
+    manualCards: [],
+    supplyStatusById: Object.create(null),
+    isCreatingManualCard: false,
     lastMovedFichaId: null,
     lastHiddenAt: Date.now(),
     lastAutoRefreshAt: 0
@@ -61,6 +81,21 @@
     viewLoading: null,
     viewLoadingTimeout: null,
     viewCurrentFichaId: null,
+    createModal: null,
+    createOverlay: null,
+    createCloseBtn: null,
+    createCancelBtn: null,
+    createForm: null,
+    createSubmitBtn: null,
+    createTituloInput: null,
+    createDataEntregaInput: null,
+    createEventoInput: null,
+    createArteInput: null,
+    createTecidoInput: null,
+    createEtapaInput: null,
+    createSupplyStatusInput: null,
+    globalFilterToggle: null,
+    globalFilterMenu: null,
     previewTooltip: null,
     previewTooltipImg: null
   };
@@ -81,6 +116,8 @@
     }
 
     state.filters = loadFilters();
+    state.manualCards = loadManualCards();
+    state.supplyStatusById = loadSupplyStatusMap();
 
     initEventListeners();
     hydrateFilterControls();
@@ -91,6 +128,7 @@
   function initEventListeners() {
     const filterCliente = document.getElementById('filterClienteKanban');
     const btnAtualizar = document.getElementById('btnAtualizarKanban');
+    const btnNovoCartao = document.getElementById('btnNovoCartaoKanban');
     const badgeFiltroSemanaAtual = document.getElementById('badgeFiltroSemanaAtualKanban');
     const kanbanBoard = document.getElementById('kanbanBoard');
     ui.viewModal = document.getElementById('kanbanViewModal');
@@ -99,6 +137,23 @@
     ui.viewFichaId = document.getElementById('kanbanViewFichaId');
     ui.viewCloseBtn = document.getElementById('btnCloseKanbanViewModal');
     ui.viewLoading = document.getElementById('kanbanViewLoading');
+    ui.createModal = document.getElementById('kanbanCreateCardModal');
+    ui.createOverlay = ui.createModal ? ui.createModal.querySelector('.kanban-create-modal-overlay') : null;
+    ui.createCloseBtn = document.getElementById('btnCloseKanbanCreateModal');
+    ui.createCancelBtn = document.getElementById('btnCancelKanbanCreateModal');
+    ui.createForm = document.getElementById('kanbanCreateCardForm');
+    ui.createSubmitBtn = document.getElementById('btnSubmitKanbanCreateModal');
+    ui.createTituloInput = document.getElementById('kanbanCreateTitulo');
+    ui.createDataEntregaInput = document.getElementById('kanbanCreateDataEntrega');
+    ui.createEventoInput = document.getElementById('kanbanCreateEvento');
+    ui.createArteInput = document.getElementById('kanbanCreateArte');
+    ui.createTecidoInput = document.getElementById('kanbanCreateTecido');
+    ui.createEtapaInput = document.getElementById('kanbanCreateEtapa');
+    ui.createSupplyStatusInput = document.getElementById('kanbanCreateSupplyStatus');
+    ui.globalFilterToggle = document.getElementById('kanbanGlobalFilterToggle');
+    ui.globalFilterMenu = document.getElementById('kanbanGlobalFilterMenu');
+    initColumnSortButtons();
+    renderGlobalFilterMenu();
 
     if (filterCliente) {
       filterCliente.addEventListener('input', debounce(event => {
@@ -118,6 +173,10 @@
       });
     }
 
+    if (btnNovoCartao) {
+      btnNovoCartao.addEventListener('click', openCreateModal);
+    }
+
     if (badgeFiltroSemanaAtual) {
       badgeFiltroSemanaAtual.addEventListener('click', () => {
         state.filters.onlyCurrentWeek = !state.filters.onlyCurrentWeek;
@@ -125,6 +184,16 @@
         syncCurrentWeekFilterButton();
         renderKanban();
       });
+    }
+
+    if (ui.globalFilterToggle) {
+      ui.globalFilterToggle.addEventListener('click', () => {
+        toggleGlobalFilterMenu();
+      });
+    }
+
+    if (ui.globalFilterMenu) {
+      ui.globalFilterMenu.addEventListener('click', handleGlobalFilterMenuClick);
     }
 
     if (kanbanBoard) {
@@ -144,6 +213,22 @@
       ui.viewOverlay.addEventListener('click', closeViewModal);
     }
 
+    if (ui.createOverlay) {
+      ui.createOverlay.addEventListener('click', closeCreateModal);
+    }
+
+    if (ui.createCloseBtn) {
+      ui.createCloseBtn.addEventListener('click', closeCreateModal);
+    }
+
+    if (ui.createCancelBtn) {
+      ui.createCancelBtn.addEventListener('click', closeCreateModal);
+    }
+
+    if (ui.createForm) {
+      ui.createForm.addEventListener('submit', handleCreateCardSubmit);
+    }
+
     if (ui.viewFrame) {
       ui.viewFrame.addEventListener('error', handleViewFrameError);
     }
@@ -151,6 +236,7 @@
     window.addEventListener('message', handleViewFrameMessage);
 
     document.addEventListener('keydown', handleGlobalKeydown);
+    document.addEventListener('click', handleDocumentClick);
     document.addEventListener('visibilitychange', handleVisibilityRefreshTrigger);
     window.addEventListener('focus', handleWindowFocusRefresh);
 
@@ -160,6 +246,257 @@
       column.addEventListener('dragleave', handleDragLeaveColumn);
       column.addEventListener('drop', handleDropColumn);
     });
+  }
+
+  function initColumnSortButtons() {
+    document.querySelectorAll('.kanban-sort-date-btn[data-status]').forEach(button => {
+      const status = String(button.dataset.status || '').trim().toLowerCase();
+      if (!VALID_STATUS.has(status)) return;
+      button.setAttribute('title', 'Organizar por data');
+      button.setAttribute('aria-label', `Organizar por data na coluna ${status}`);
+    });
+  }
+
+  function toggleGlobalFilterMenu() {
+    if (!ui.globalFilterMenu || !ui.globalFilterToggle) return;
+
+    const shouldOpen = ui.globalFilterMenu.hidden === true;
+    if (shouldOpen) {
+      renderGlobalFilterMenu();
+    }
+    ui.globalFilterMenu.hidden = !shouldOpen;
+    ui.globalFilterToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  }
+
+  function closeGlobalFilterMenu() {
+    if (!ui.globalFilterMenu || !ui.globalFilterToggle) return false;
+    if (ui.globalFilterMenu.hidden) return false;
+    ui.globalFilterMenu.hidden = true;
+    ui.globalFilterToggle.setAttribute('aria-expanded', 'false');
+    return true;
+  }
+
+  function handleDocumentClick(event) {
+    const insideGlobalFilters = event.target.closest('.kanban-global-filter-wrap');
+    if (insideGlobalFilters) return;
+    closeGlobalFilterMenu();
+  }
+
+  function renderGlobalFilterMenu() {
+    if (!ui.globalFilterMenu) return;
+
+    const filterState = {
+      tecido: String(state.filters.tecido || '').trim(),
+      status: String(state.filters.status || '').trim(),
+      personalizacao: String(state.filters.personalizacao || '').trim()
+    };
+    const tecidoOptions = getGlobalTecidoFilterOptions();
+    const statusOptions = getGlobalSupplyStatusFilterOptions();
+    const personalizacaoOptions = getGlobalPersonalizacaoFilterOptions();
+
+    const tecidoItemsHtml = renderGlobalFilterOptionItems({
+      filterKind: 'tecido',
+      allLabel: 'Todos os tecidos',
+      selectedValue: filterState.tecido,
+      options: tecidoOptions
+    });
+
+    const statusItemsHtml = renderGlobalFilterOptionItems({
+      filterKind: 'status',
+      allLabel: 'Todos os status',
+      selectedValue: filterState.status,
+      options: statusOptions
+    });
+
+    const personalizacaoItemsHtml = renderGlobalFilterOptionItems({
+      filterKind: 'personalizacao',
+      allLabel: 'Todas as personalizações',
+      selectedValue: filterState.personalizacao,
+      options: personalizacaoOptions
+    });
+
+    ui.globalFilterMenu.innerHTML = `
+      <div class="kanban-sort-menu-group">
+        <span class="kanban-sort-menu-group-title">Tecido</span>
+        ${tecidoItemsHtml}
+      </div>
+      <div class="kanban-sort-menu-divider" role="separator"></div>
+      <div class="kanban-sort-menu-group">
+        <span class="kanban-sort-menu-group-title">Status</span>
+        ${statusItemsHtml}
+      </div>
+      <div class="kanban-sort-menu-divider" role="separator"></div>
+      <div class="kanban-sort-menu-group">
+        <span class="kanban-sort-menu-group-title">Personalização</span>
+        ${personalizacaoItemsHtml}
+      </div>
+    `;
+  }
+
+  function renderGlobalFilterOptionItems({
+    filterKind,
+    allLabel,
+    selectedValue,
+    options
+  }) {
+    const baseItems = [];
+    baseItems.push(renderGlobalFilterOptionButton({
+      filterKind,
+      value: '',
+      label: allLabel,
+      count: options.reduce((sum, item) => sum + Number(item.count || 0), 0),
+      selected: !selectedValue
+    }));
+
+    options.forEach(option => {
+      baseItems.push(renderGlobalFilterOptionButton({
+        filterKind,
+        value: option.value,
+        label: option.label,
+        count: option.count,
+        selected: selectedValue === option.value
+      }));
+    });
+
+    if (options.length <= 1) {
+      baseItems.push('<span class="kanban-sort-menu-note">Sem variação no quadro</span>');
+    }
+
+    return baseItems.join('');
+  }
+
+  function renderGlobalFilterOptionButton({
+    filterKind,
+    value,
+    label,
+    count,
+    selected
+  }) {
+    const valueEncoded = encodeURIComponent(String(value || ''));
+    const selectedClass = selected ? ' is-selected' : '';
+    const countText = Number.isFinite(Number(count)) ? ` (${Number(count)})` : '';
+    return `
+      <button type="button" class="kanban-sort-menu-item kanban-sort-menu-item-filter${selectedClass}" data-action="set-global-filter" data-filter-kind="${filterKind}" data-filter-value="${valueEncoded}" role="menuitemradio" aria-checked="${selected ? 'true' : 'false'}">
+        <i class="fas ${selected ? 'fa-check-circle' : 'fa-circle'}" aria-hidden="true"></i>
+        <span>${escapeHtml(label)}${countText}</span>
+      </button>
+    `;
+  }
+
+  function handleGlobalFilterMenuClick(event) {
+    const optionButton = event.target.closest('button[data-action="set-global-filter"]');
+    if (!optionButton) return;
+
+    const filterKind = String(optionButton.dataset.filterKind || '').trim().toLowerCase();
+    if (!VALID_GLOBAL_FILTER_KIND.has(filterKind)) return;
+
+    const filterValue = decodeURIComponent(String(optionButton.dataset.filterValue || ''));
+    setGlobalFilter(filterKind, filterValue);
+    saveFilters();
+    renderKanban();
+    renderGlobalFilterMenu();
+  }
+
+  function setGlobalFilter(filterKind, filterValue) {
+    if (!VALID_GLOBAL_FILTER_KIND.has(filterKind)) return;
+
+    if (filterKind === 'tecido') {
+      state.filters.tecido = String(filterValue || '').trim();
+      return;
+    }
+
+    if (filterKind === 'status') {
+      const value = String(filterValue || '').trim();
+      state.filters.status = value ? normalizeSupplyStatus(value) : '';
+      return;
+    }
+
+    const value = String(filterValue || '').trim();
+    state.filters.personalizacao = value ? normalizePersonalizacaoFilterValue(value) : '';
+  }
+
+  function hasActiveGlobalFilters() {
+    return Boolean(
+      String(state.filters.tecido || '').trim() ||
+      String(state.filters.status || '').trim() ||
+      String(state.filters.personalizacao || '').trim()
+    );
+  }
+
+  function syncGlobalFilterToggleState() {
+    if (!ui.globalFilterToggle) return;
+    const isActive = hasActiveGlobalFilters();
+    ui.globalFilterToggle.classList.toggle('has-active-filter', isActive);
+    ui.globalFilterToggle.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  }
+
+  function getFichasForGlobalFilterOptions(excludeFilterKind = '') {
+    const clienteTerm = normalizeText(state.filters.cliente);
+    const onlyCurrentWeek = Boolean(state.filters.onlyCurrentWeek);
+    const tecidoFilter = excludeFilterKind === 'tecido' ? '' : String(state.filters.tecido || '').trim();
+    const statusRaw = excludeFilterKind === 'status' ? '' : String(state.filters.status || '').trim();
+    const statusFilter = statusRaw ? normalizeSupplyStatus(statusRaw) : '';
+    const personalizacaoRaw = excludeFilterKind === 'personalizacao' ? '' : String(state.filters.personalizacao || '').trim();
+    const personalizacaoFilter = personalizacaoRaw ? normalizePersonalizacaoFilterValue(personalizacaoRaw) : '';
+
+    const filtered = state.fichas.filter(ficha => {
+      const statusFicha = String(ficha.status || '').toLowerCase();
+      if (statusFicha === 'entregue') return false;
+
+      if (!matchesSearchTerm(ficha, clienteTerm)) return false;
+      if (onlyCurrentWeek && !isEntregaNaSemanaAtualAteSexta(ficha?.data_entrega)) return false;
+      if (tecidoFilter && getTecidoFilterValue(ficha) !== tecidoFilter) return false;
+      if (statusFilter && getSupplyStatusByFichaId(Number(ficha?.id || 0)) !== statusFilter) return false;
+      if (personalizacaoFilter && getPersonalizacaoFilterValue(ficha) !== personalizacaoFilter) return false;
+      return true;
+    });
+
+    return dedupeByNumeroVenda(filtered);
+  }
+
+  function getGlobalTecidoFilterOptions() {
+    const map = new Map();
+    getFichasForGlobalFilterOptions('tecido').forEach(ficha => {
+      const value = getTecidoFilterValue(ficha);
+      const label = getTecidoLabel(ficha?.material);
+      const current = map.get(value);
+      if (!current) {
+        map.set(value, { value, label, count: 1 });
+        return;
+      }
+      current.count += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+  }
+
+  function getGlobalSupplyStatusFilterOptions() {
+    const map = new Map();
+    getFichasForGlobalFilterOptions('status').forEach(ficha => {
+      const value = getSupplyStatusByFichaId(Number(ficha?.id || 0));
+      const label = SUPPLY_STATUS_LABELS[value] || SUPPLY_STATUS_LABELS.tudo_ok;
+      const current = map.get(value);
+      if (!current) {
+        map.set(value, { value, label, count: 1 });
+        return;
+      }
+      current.count += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => getSupplyStatusSortIndexByValue(a.value) - getSupplyStatusSortIndexByValue(b.value));
+  }
+
+  function getGlobalPersonalizacaoFilterOptions() {
+    const map = new Map();
+    getFichasForGlobalFilterOptions('personalizacao').forEach(ficha => {
+      const value = getPersonalizacaoFilterValue(ficha);
+      const label = getPersonalizacaoLabel(ficha?.arte) || 'Não informado';
+      const current = map.get(value);
+      if (!current) {
+        map.set(value, { value, label, count: 1 });
+        return;
+      }
+      current.count += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
   }
 
   function handleVisibilityRefreshTrigger() {
@@ -208,15 +545,24 @@
 
     try {
       const fichas = await db.listarFichas();
-      state.fichas = (Array.isArray(fichas) ? fichas : []).map(normalizeFichaKanbanStatus);
+      const fichasApi = (Array.isArray(fichas) ? fichas : []).map(normalizeFichaKanbanStatus);
+      const manualCards = Array.isArray(state.manualCards)
+        ? state.manualCards.map(normalizeFichaKanbanStatus)
+        : [];
+      state.fichas = [...fichasApi, ...manualCards];
+      pruneSupplyStatusMap();
     } finally {
       state.isLoading = false;
     }
   }
 
   function normalizeFichaKanbanStatus(ficha) {
+    const idRaw = Number(ficha?.id);
+    const fallbackId = Date.now() + Math.floor(Math.random() * 1000);
     return {
       ...ficha,
+      id: Number.isInteger(idRaw) && idRaw > 0 ? idRaw : fallbackId,
+      is_manual_card: ficha?.is_manual_card === true,
       kanban_status: normalizeBoardStatus(ficha?.kanban_status),
       kanban_ordem: normalizeBoardOrder(ficha?.kanban_ordem)
     };
@@ -243,6 +589,8 @@
     });
 
     updateTotalCounter(fichasSemRepeticao.length);
+    renderGlobalFilterMenu();
+    syncGlobalFilterToggleState();
     animateMovedCardIfNeeded();
   }
 
@@ -273,17 +621,36 @@
   function getFichasFiltradas() {
     const clienteTerm = normalizeText(state.filters.cliente);
     const onlyCurrentWeek = Boolean(state.filters.onlyCurrentWeek);
+    const tecidoFilter = String(state.filters.tecido || '').trim();
+    const statusRaw = String(state.filters.status || '').trim();
+    const statusFilter = statusRaw ? normalizeSupplyStatus(statusRaw) : '';
+    const personalizacaoRaw = String(state.filters.personalizacao || '').trim();
+    const personalizacaoFilter = personalizacaoRaw ? normalizePersonalizacaoFilterValue(personalizacaoRaw) : '';
 
     return state.fichas
       .filter(ficha => {
         const statusFicha = String(ficha.status || '').toLowerCase();
         if (statusFicha === 'entregue') return false;
 
-        const cliente = normalizeText(ficha.cliente);
-        if (clienteTerm && !cliente.includes(clienteTerm)) return false;
+        if (!matchesSearchTerm(ficha, clienteTerm)) return false;
         if (onlyCurrentWeek && !isEntregaNaSemanaAtualAteSexta(ficha?.data_entrega)) return false;
+        if (tecidoFilter && getTecidoFilterValue(ficha) !== tecidoFilter) return false;
+        if (statusFilter && getSupplyStatusByFichaId(Number(ficha?.id || 0)) !== statusFilter) return false;
+        if (personalizacaoFilter && getPersonalizacaoFilterValue(ficha) !== personalizacaoFilter) return false;
         return true;
       });
+  }
+
+  function matchesSearchTerm(ficha, searchTerm) {
+    if (!searchTerm) return true;
+
+    const cliente = normalizeText(ficha?.cliente);
+    if (cliente.includes(searchTerm)) return true;
+
+    const tecido = normalizeText(ficha?.material);
+    if (tecido.includes(searchTerm)) return true;
+
+    return false;
   }
 
   function sortColumnFichasForDisplay(statusKey, fichas) {
@@ -399,12 +766,18 @@
       const isSaving = Boolean(state.pendingPersistById[String(fichaId)]);
       const isDelivering = Boolean(state.pendingDeliverById[String(fichaId)]);
       const isBusy = isSaving || isDelivering;
+      const isManualCard = isManualFicha(ficha);
       const cardStatus = getBoardStatus(ficha);
       const cliente = escapeHtml(formatDisplayName(ficha.cliente || 'Cliente não informado'));
-      const numeroPedido = escapeHtml(String(ficha.numero_venda || '-'));
       const personalizacao = getPersonalizacaoLabel(ficha.arte);
+      const tecido = getTecidoLabel(ficha.material);
+      const supplyStatus = getSupplyStatusByFichaId(fichaId);
+      const supplyStatusClass = `is-${supplyStatus}`;
       const personalizacaoHtml = personalizacao
         ? `<span class="kanban-card-personalizacao">${escapeHtml(personalizacao)}</span>`
+        : '';
+      const tecidoHtml = tecido
+        ? `<span class="kanban-card-tecido">${escapeHtml(tecido)}</span>`
         : '';
       const entregaInfo = getEntregaInfo(ficha, cardStatus);
       const showDeliverButton = statusKey === 'na_costura';
@@ -422,21 +795,28 @@
              <i class="fas fa-check"></i>
            </button>`
         : '';
+      const viewButton = isManualCard
+        ? `<button type="button" class="kanban-btn-view-icon" data-action="view-manual" data-id="${fichaId}" aria-label="Cartão manual sem ficha vinculada" title="Cartão manual sem ficha vinculada">
+             <i class="fas fa-ban"></i>
+           </button>`
+        : `<button type="button" class="kanban-btn-view-icon" data-action="view" data-id="${fichaId}" aria-label="Visualizar ficha #${fichaId}"${thumbnailAttr}>
+             <i class="fas fa-eye"></i>
+           </button>`;
 
       return `
         <article class="${cardClass}" draggable="${isBusy ? 'false' : 'true'}" data-ficha-id="${fichaId}" data-status="${cardStatus}">
           <h3 class="kanban-card-cliente">${eventoPrefix}${cliente}</h3>
           <div class="kanban-card-header">
-            <span class="kanban-card-pedido">
-              <i class="fas fa-hashtag"></i>
-              <span>${numeroPedido}</span>
+            <span class="kanban-card-pedido" aria-label="Dados do cartão">
               ${personalizacaoHtml}
+              ${tecidoHtml}
+              <button type="button" class="kanban-card-supply-status ${supplyStatusClass}" data-action="cycle-supply-status" data-id="${fichaId}" data-current-status="${supplyStatus}" aria-label="Status de insumos do cartão #${fichaId}">
+                ${escapeHtml(SUPPLY_STATUS_LABELS[supplyStatus] || SUPPLY_STATUS_LABELS.tudo_ok)}
+              </button>
             </span>
             <span class="kanban-card-tools">
               ${deliverButton}
-              <button type="button" class="kanban-btn-view-icon" data-action="view" data-id="${fichaId}" aria-label="Visualizar ficha #${fichaId}"${thumbnailAttr}>
-                <i class="fas fa-eye"></i>
-              </button>
+              ${viewButton}
             </span>
           </div>
           <div class="${bodyClass}">
@@ -460,7 +840,9 @@
       const isBusy = Boolean(state.pendingSortByStatus[statusKey]);
       sortButton.disabled = isBusy;
       sortButton.classList.toggle('is-busy', isBusy);
-      sortButton.title = isBusy ? 'Organizando por data...' : 'Organizar por data';
+      sortButton.title = isBusy
+        ? 'Organizando coluna...'
+        : 'Organizar por data';
     }
   }
 
@@ -479,11 +861,11 @@
   async function handleBoardClick(event) {
     hidePreviewTooltip();
 
-    const sortButton = event.target.closest('button[data-action="sort-date"]');
+    const sortButton = event.target.closest('button[data-action="sort-column-date"]');
     if (sortButton) {
       const status = String(sortButton.dataset.status || '').trim().toLowerCase();
       if (!VALID_STATUS.has(status)) return;
-      await handleSortColumnByDate(status);
+      await handleSortColumn(status);
       return;
     }
 
@@ -492,6 +874,29 @@
       const id = Number(deliverButton.dataset.id);
       if (!id) return;
       await handleDeliverClick(id);
+      return;
+    }
+
+    const supplyStatusButton = event.target.closest('button[data-action="cycle-supply-status"]');
+    if (supplyStatusButton) {
+      const fichaId = Number(supplyStatusButton.dataset.id);
+      if (!fichaId) return;
+
+      const current = normalizeSupplyStatus(supplyStatusButton.dataset.currentStatus);
+      const next = getNextSupplyStatus(current);
+      setSupplyStatusByFichaId(fichaId, next);
+
+      supplyStatusButton.dataset.currentStatus = next;
+      supplyStatusButton.className = `kanban-card-supply-status is-${next}`;
+      supplyStatusButton.textContent = SUPPLY_STATUS_LABELS[next] || SUPPLY_STATUS_LABELS.tudo_ok;
+      return;
+    }
+
+    const viewManualButton = event.target.closest('button[data-action="view-manual"]');
+    if (viewManualButton) {
+      if (typeof window.mostrarInfo === 'function') {
+        window.mostrarInfo('Cartão manual sem ficha vinculada');
+      }
       return;
     }
 
@@ -594,6 +999,16 @@
     const ficha = findFichaById(fichaId);
     if (!ficha) return;
 
+    if (isManualFicha(ficha)) {
+      ficha.status = 'entregue';
+      saveManualCards();
+      renderKanban();
+      if (typeof window.mostrarInfo === 'function') {
+        window.mostrarInfo(`Cartão manual #${fichaId} marcado como entregue`);
+      }
+      return;
+    }
+
     state.pendingDeliverById[key] = true;
     renderKanban();
 
@@ -615,7 +1030,7 @@
     }
   }
 
-  async function handleSortColumnByDate(statusKey) {
+  async function handleSortColumn(statusKey) {
     if (!VALID_STATUS.has(statusKey)) return;
     if (state.pendingSortByStatus[statusKey]) return;
 
@@ -623,6 +1038,7 @@
     if (!orderedIds.length) return;
 
     const beforeOrder = getColumnOrderFromState(statusKey);
+
     if (arraysEqual(beforeOrder, orderedIds)) {
       if (typeof window.mostrarInfo === 'function') {
         window.mostrarInfo('A coluna já está organizada por data');
@@ -635,6 +1051,7 @@
 
     try {
       applyColumnOrder(statusKey, orderedIds);
+      saveManualCards();
       renderKanban();
       await db.atualizarKanbanOrdem(statusKey, orderedIds);
 
@@ -642,7 +1059,7 @@
         window.mostrarInfo('Coluna organizada por data');
       }
     } catch (error) {
-      console.error('Erro ao ordenar coluna por data:', error);
+      console.error('Erro ao organizar coluna por data:', error);
       if (typeof window.mostrarErro === 'function') {
         window.mostrarErro('Não foi possível organizar a coluna por data');
       }
@@ -654,6 +1071,11 @@
 
   function handleGlobalKeydown(event) {
     if (event.key !== 'Escape') return;
+    if (closeGlobalFilterMenu()) return;
+    if (ui.createModal && !ui.createModal.hidden) {
+      closeCreateModal();
+      return;
+    }
     if (!ui.viewModal || ui.viewModal.hidden) return;
     closeViewModal();
   }
@@ -722,7 +1144,7 @@
 
     ui.viewModal.hidden = false;
     ui.viewModal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('kanban-modal-open');
+    syncModalBodyLock();
   }
 
   function closeViewModal() {
@@ -733,7 +1155,121 @@
     ui.viewModal.hidden = true;
     ui.viewModal.setAttribute('aria-hidden', 'true');
     if (ui.viewFrame) ui.viewFrame.src = 'about:blank';
-    document.body.classList.remove('kanban-modal-open');
+    syncModalBodyLock();
+  }
+
+  function openCreateModal() {
+    if (!ui.createModal) return;
+    setCreateModalDefaults();
+    setCreateModalSubmitting(false);
+    ui.createModal.hidden = false;
+    ui.createModal.setAttribute('aria-hidden', 'false');
+    syncModalBodyLock();
+    if (ui.createTituloInput) {
+      ui.createTituloInput.focus();
+      ui.createTituloInput.select();
+    }
+  }
+
+  function closeCreateModal() {
+    if (!ui.createModal) return;
+    ui.createModal.hidden = true;
+    ui.createModal.setAttribute('aria-hidden', 'true');
+    setCreateModalSubmitting(false);
+    syncModalBodyLock();
+  }
+
+  function syncModalBodyLock() {
+    const hasOpenView = Boolean(ui.viewModal && ui.viewModal.hidden === false);
+    const hasOpenCreate = Boolean(ui.createModal && ui.createModal.hidden === false);
+    document.body.classList.toggle('kanban-modal-open', hasOpenView || hasOpenCreate);
+  }
+
+  function setCreateModalDefaults() {
+    if (ui.createForm) ui.createForm.reset();
+    if (ui.createDataEntregaInput) ui.createDataEntregaInput.value = getTodayIsoDate();
+    if (ui.createEventoInput) ui.createEventoInput.value = 'nao';
+    if (ui.createEtapaInput) ui.createEtapaInput.value = 'pendente';
+    if (ui.createSupplyStatusInput) ui.createSupplyStatusInput.value = 'tudo_ok';
+  }
+
+  function setCreateModalSubmitting(isSubmitting) {
+    state.isCreatingManualCard = isSubmitting === true;
+    if (!ui.createForm) return;
+
+    Array.from(ui.createForm.elements || []).forEach(field => {
+      if (!field || !('disabled' in field)) return;
+      if (field === ui.createCancelBtn) return;
+      field.disabled = isSubmitting === true;
+    });
+  }
+
+  async function handleCreateCardSubmit(event) {
+    event.preventDefault();
+    if (state.isCreatingManualCard) return;
+
+    const titulo = String(ui.createTituloInput?.value || '').trim();
+    const dataEntrega = String(ui.createDataEntregaInput?.value || '').trim();
+    const evento = normalizeEventoValue(ui.createEventoInput?.value);
+    const arte = String(ui.createArteInput?.value || '').trim();
+    const tecido = String(ui.createTecidoInput?.value || '').trim();
+    const etapa = normalizeBoardStatus(ui.createEtapaInput?.value);
+    const supplyStatus = normalizeSupplyStatus(ui.createSupplyStatusInput?.value);
+
+    if (!titulo) {
+      if (typeof window.mostrarAviso === 'function') {
+        window.mostrarAviso('Informe o título do cartão');
+      }
+      return;
+    }
+
+    if (!parseIsoDate(dataEntrega)) {
+      if (typeof window.mostrarAviso === 'function') {
+        window.mostrarAviso('Informe uma data de entrega válida');
+      }
+      return;
+    }
+
+    const targetStatus = VALID_STATUS.has(etapa) ? etapa : 'pendente';
+    setCreateModalSubmitting(true);
+
+    try {
+      const manualCardId = generateManualCardId();
+      const newCard = normalizeFichaKanbanStatus({
+        id: manualCardId,
+        cliente: titulo,
+        data_entrega: dataEntrega,
+        evento,
+        arte,
+        material: tecido,
+        status: 'pendente',
+        kanban_status: targetStatus,
+        kanban_ordem: getNextColumnOrder(targetStatus),
+        is_manual_card: true,
+        data_criacao: new Date().toISOString(),
+        data_atualizacao: new Date().toISOString()
+      });
+
+      state.manualCards.push(newCard);
+      state.fichas.push(newCard);
+      saveManualCards();
+      setSupplyStatusByFichaId(newCard.id, supplyStatus);
+
+      closeCreateModal();
+      renderKanban();
+
+      if (typeof window.mostrarSucesso === 'function') {
+        window.mostrarSucesso('Cartão manual criado com sucesso');
+      } else if (typeof window.mostrarInfo === 'function') {
+        window.mostrarInfo('Cartão manual criado com sucesso');
+      }
+    } catch (error) {
+      console.error('Erro ao criar cartão manual no Kanban:', error);
+      if (typeof window.mostrarErro === 'function') {
+        window.mostrarErro('Não foi possível criar o cartão manual');
+      }
+      setCreateModalSubmitting(false);
+    }
   }
 
   function handleDragStart(event) {
@@ -811,6 +1347,7 @@
 
     const ficha = findFichaById(draggedId);
     if (!ficha) return;
+    const isManualCard = isManualFicha(ficha);
 
     const currentStatus = getBoardStatus(ficha);
     const sourceStatus = VALID_STATUS.has(state.drag.sourceStatus) ? state.drag.sourceStatus : currentStatus;
@@ -843,6 +1380,7 @@
         if (arraysEqual(beforeOrder, sourceFinalOrder)) return;
 
         applyColumnOrder(sourceStatus, sourceFinalOrder);
+        saveManualCards();
         state.lastMovedFichaId = draggedId;
         renderKanban();
 
@@ -855,21 +1393,32 @@
 
         applyColumnOrder(sourceStatus, sourceFinalOrder);
         applyColumnOrder(targetStatus, targetFinalOrder);
+        saveManualCards();
 
         state.lastMovedFichaId = draggedId;
         renderKanban();
 
-        const response = await db.atualizarKanbanStatus(draggedId, targetStatus);
-        const persistedStatus = normalizeBoardStatus(response?.kanbanStatus || targetStatus);
-        setBoardStatus(draggedId, persistedStatus);
-
         const persistPromises = [];
-        if (sourceFinalOrder.length) {
-          persistPromises.push(db.atualizarKanbanOrdem(sourceStatus, sourceFinalOrder));
+        if (isManualCard) {
+          if (sourceFinalOrder.length) {
+            persistPromises.push(db.atualizarKanbanOrdem(sourceStatus, sourceFinalOrder));
+          }
+          if (targetFinalOrder.length) {
+            persistPromises.push(db.atualizarKanbanOrdem(targetStatus, targetFinalOrder));
+          }
+        } else {
+          const response = await db.atualizarKanbanStatus(draggedId, targetStatus);
+          const persistedStatus = normalizeBoardStatus(response?.kanbanStatus || targetStatus);
+          setBoardStatus(draggedId, persistedStatus);
+
+          if (sourceFinalOrder.length) {
+            persistPromises.push(db.atualizarKanbanOrdem(sourceStatus, sourceFinalOrder));
+          }
+          if (targetFinalOrder.length) {
+            persistPromises.push(db.atualizarKanbanOrdem(persistedStatus, targetFinalOrder));
+          }
         }
-        if (targetFinalOrder.length) {
-          persistPromises.push(db.atualizarKanbanOrdem(persistedStatus, targetFinalOrder));
-        }
+
         if (persistPromises.length) {
           await Promise.all(persistPromises);
         }
@@ -878,10 +1427,11 @@
     } catch (error) {
       console.error('Erro ao persistir status do kanban:', error);
       restoreKanbanSnapshot(snapshot);
+      saveManualCards();
       state.lastMovedFichaId = draggedId;
 
       if (typeof window.mostrarErro === 'function') {
-        window.mostrarErro(`Não foi possível atualizar a ordem da ficha #${draggedId}`);
+        window.mostrarErro(`Não foi possível atualizar a ordem do cartão #${draggedId}`);
       }
     } finally {
       delete state.pendingPersistById[String(draggedId)];
@@ -1005,30 +1555,69 @@
   }
 
   function getColumnOrderByDate(statusKey) {
-    return state.fichas
-      .filter(ficha => getBoardStatus(ficha) === statusKey && String(ficha.status || '').toLowerCase() !== 'entregue')
+    return getColumnFichasForSort(statusKey)
       .sort((a, b) => {
-        const eventoA = isEventoFicha(a);
-        const eventoB = isEventoFicha(b);
-        if (eventoA !== eventoB) return eventoA ? -1 : 1;
-
-        const tsA = getSortTimestamp(a);
-        const tsB = getSortTimestamp(b);
-        const hasA = tsA > 0;
-        const hasB = tsB > 0;
-
-        if (hasA && hasB && tsA !== tsB) return tsA - tsB;
-        if (hasA && !hasB) return -1;
-        if (!hasA && hasB) return 1;
-
-        const orderA = normalizeBoardOrder(a?.kanban_ordem);
-        const orderB = normalizeBoardOrder(b?.kanban_ordem);
-        if (orderA !== null && orderB !== null && orderA !== orderB) return orderA - orderB;
-
-        return Number(a?.id || 0) - Number(b?.id || 0);
+        const byEvent = compareByEventPriority(a, b);
+        if (byEvent !== 0) return byEvent;
+        return compareByDateOrderAndId(a, b);
       })
       .map(ficha => Number(ficha.id))
       .filter(id => Number.isInteger(id) && id > 0);
+  }
+
+  function getColumnFichasForSort(statusKey) {
+    return state.fichas
+      .filter(ficha => getBoardStatus(ficha) === statusKey && String(ficha.status || '').toLowerCase() !== 'entregue');
+  }
+
+  function compareByEventPriority(a, b) {
+    const eventoA = isEventoFicha(a);
+    const eventoB = isEventoFicha(b);
+    if (eventoA !== eventoB) return eventoA ? -1 : 1;
+    return 0;
+  }
+
+  function compareByDateOrderAndId(a, b) {
+    const tsA = getSortTimestamp(a);
+    const tsB = getSortTimestamp(b);
+    const hasA = tsA > 0;
+    const hasB = tsB > 0;
+
+    if (hasA && hasB && tsA !== tsB) return tsA - tsB;
+    if (hasA && !hasB) return -1;
+    if (!hasA && hasB) return 1;
+
+    const orderA = normalizeBoardOrder(a?.kanban_ordem);
+    const orderB = normalizeBoardOrder(b?.kanban_ordem);
+    if (orderA !== null && orderB !== null && orderA !== orderB) return orderA - orderB;
+
+    return Number(a?.id || 0) - Number(b?.id || 0);
+  }
+
+  function getSupplyStatusSortIndexByValue(statusValue) {
+    const normalized = normalizeSupplyStatus(statusValue);
+    const index = SUPPLY_STATUS_FLOW.indexOf(normalized);
+    return index === -1 ? 0 : index;
+  }
+
+  function getSortTecidoValue(ficha) {
+    return String(ficha?.material || '').trim();
+  }
+
+  function getTecidoFilterValue(ficha) {
+    const normalized = normalizeText(getSortTecidoValue(ficha));
+    return normalized || EMPTY_TECIDO_FILTER_VALUE;
+  }
+
+  function normalizePersonalizacaoFilterValue(value) {
+    const normalized = normalizeText(value)
+      .replace(/[\s/-]+/g, '_')
+      .replace(/_e_/g, '_');
+    return normalized || EMPTY_PERSONALIZACAO_FILTER_VALUE;
+  }
+
+  function getPersonalizacaoFilterValue(ficha) {
+    return normalizePersonalizacaoFilterValue(ficha?.arte);
   }
 
   function composeColumnOrder(statusKey, prioritizedIds = []) {
@@ -1134,18 +1723,164 @@
     return Math.min(max, Math.max(min, value));
   }
 
+  function getSupplyStatusByFichaId(fichaId) {
+    const key = String(Number(fichaId) || 0);
+    return normalizeSupplyStatus(state.supplyStatusById[key]);
+  }
+
+  function setSupplyStatusByFichaId(fichaId, statusValue) {
+    const key = String(Number(fichaId) || 0);
+    if (!key || key === '0') return;
+    state.supplyStatusById[key] = normalizeSupplyStatus(statusValue);
+    saveSupplyStatusMap();
+  }
+
+  function normalizeSupplyStatus(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    return VALID_SUPPLY_STATUS.has(normalized) ? normalized : 'tudo_ok';
+  }
+
+  function getNextSupplyStatus(currentValue) {
+    const normalized = normalizeSupplyStatus(currentValue);
+    const currentIndex = SUPPLY_STATUS_FLOW.indexOf(normalized);
+    if (currentIndex === -1) return 'tudo_ok';
+    const nextIndex = (currentIndex + 1) % SUPPLY_STATUS_FLOW.length;
+    return SUPPLY_STATUS_FLOW[nextIndex];
+  }
+
+  function loadSupplyStatusMap() {
+    try {
+      const raw = localStorage.getItem(STORAGE_SUPPLY_STATUS_KEY);
+      if (!raw) return Object.create(null);
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return Object.create(null);
+
+      const normalized = Object.create(null);
+      Object.entries(parsed).forEach(([key, value]) => {
+        const id = String(Number(key) || 0);
+        if (!id || id === '0') return;
+        normalized[id] = normalizeSupplyStatus(value);
+      });
+      return normalized;
+    } catch (_) {
+      return Object.create(null);
+    }
+  }
+
+  function saveSupplyStatusMap() {
+    localStorage.setItem(STORAGE_SUPPLY_STATUS_KEY, JSON.stringify(state.supplyStatusById));
+  }
+
+  function pruneSupplyStatusMap() {
+    const validIds = new Set(state.fichas.map(ficha => String(Number(ficha?.id) || 0)).filter(id => id !== '0'));
+    let changed = false;
+
+    Object.keys(state.supplyStatusById).forEach(id => {
+      if (validIds.has(id)) return;
+      delete state.supplyStatusById[id];
+      changed = true;
+    });
+
+    if (changed) {
+      saveSupplyStatusMap();
+    }
+  }
+
+  function loadManualCards() {
+    try {
+      const raw = localStorage.getItem(STORAGE_MANUAL_CARDS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map(normalizeFichaKanbanStatus)
+        .filter(isManualFicha);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveManualCards() {
+    const manualFromState = state.fichas
+      .filter(isManualFicha)
+      .map(card => ({
+        id: Number(card.id),
+        cliente: String(card.cliente || ''),
+        data_entrega: String(card.data_entrega || ''),
+        evento: normalizeEventoValue(card.evento),
+        arte: String(card.arte || ''),
+        material: String(card.material || ''),
+        status: String(card.status || 'pendente'),
+        kanban_status: normalizeBoardStatus(card.kanban_status),
+        kanban_ordem: normalizeBoardOrder(card.kanban_ordem),
+        is_manual_card: true,
+        data_criacao: String(card.data_criacao || ''),
+        data_atualizacao: new Date().toISOString()
+      }));
+
+    state.manualCards = manualFromState;
+    localStorage.setItem(STORAGE_MANUAL_CARDS_KEY, JSON.stringify(manualFromState));
+  }
+
+  function isManualFicha(ficha) {
+    return ficha?.is_manual_card === true;
+  }
+
+  function generateManualCardId() {
+    const base = Date.now() + 9000000000000;
+    let candidate = base;
+    while (findFichaById(candidate)) {
+      candidate += 1;
+    }
+    return candidate;
+  }
+
+  function getNextColumnOrder(statusKey) {
+    const maxOrder = state.fichas
+      .filter(ficha => getBoardStatus(ficha) === statusKey)
+      .map(ficha => normalizeBoardOrder(ficha.kanban_ordem))
+      .filter(order => order !== null)
+      .reduce((max, value) => Math.max(max, Number(value || 0)), 0);
+    return maxOrder + 1;
+  }
+
+  function normalizeEventoValue(value) {
+    return String(value || '').trim().toLowerCase() === 'sim' ? 'sim' : 'nao';
+  }
+
+  function getTodayIsoDate() {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${now.getFullYear()}-${month}-${day}`;
+  }
+
+  function getTecidoLabel(value) {
+    const normalized = String(value || '').trim();
+    return normalized || 'Não informado';
+  }
+
   function loadFilters() {
     try {
       const raw = localStorage.getItem(STORAGE_FILTER_KEY);
-      if (!raw) return { cliente: '', onlyCurrentWeek: false };
+      if (!raw) {
+        return { cliente: '', onlyCurrentWeek: false, tecido: '', status: '', personalizacao: '' };
+      }
 
       const parsed = JSON.parse(raw);
       return {
         cliente: typeof parsed.cliente === 'string' ? parsed.cliente : '',
-        onlyCurrentWeek: parsed.onlyCurrentWeek === true
+        onlyCurrentWeek: parsed.onlyCurrentWeek === true,
+        tecido: typeof parsed.tecido === 'string' ? parsed.tecido.trim() : '',
+        status: typeof parsed.status === 'string' && parsed.status.trim()
+          ? normalizeSupplyStatus(parsed.status)
+          : '',
+        personalizacao: typeof parsed.personalizacao === 'string' && parsed.personalizacao.trim()
+          ? normalizePersonalizacaoFilterValue(parsed.personalizacao)
+          : ''
       };
     } catch (_) {
-      return { cliente: '', onlyCurrentWeek: false };
+      return { cliente: '', onlyCurrentWeek: false, tecido: '', status: '', personalizacao: '' };
     }
   }
 
@@ -1158,6 +1893,8 @@
 
     if (filterCliente) filterCliente.value = state.filters.cliente;
     syncCurrentWeekFilterButton();
+    syncGlobalFilterToggleState();
+    renderGlobalFilterMenu();
   }
 
   function syncCurrentWeekFilterButton() {

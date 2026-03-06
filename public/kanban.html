@@ -69,9 +69,21 @@
                         <i class="fas fa-grip"></i>
                         <input type="text" id="filterClienteKanban" class="form-control kanban-title-search-input"
                             placeholder="Buscar por Nome" aria-label="Buscar por Nome">
+                        <div class="kanban-global-filter-wrap">
+                            <button type="button" id="kanbanGlobalFilterToggle" class="kanban-sort-date-btn kanban-global-filter-toggle"
+                                title="Filtrar cartões" aria-label="Filtrar cartões" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-filter" aria-hidden="true"></i>
+                            </button>
+                            <div id="kanbanGlobalFilterMenu" class="kanban-sort-menu kanban-global-filter-menu" role="menu" hidden></div>
+                        </div>
                     </div>
                     <div class="kanban-board-header-actions">
                         <span id="kanbanTotalCount" class="badge">0 fichas</span>
+                        <button type="button" id="btnNovoCartaoKanban" class="btn btn-primary btn-icon"
+                            title="Criar cartão manual" aria-label="Criar cartão manual">
+                            <i class="fas fa-plus"></i>
+                            <span>Novo Cartão</span>
+                        </button>
                         <button type="button" id="badgeFiltroSemanaAtualKanban" class="badge kanban-filter-badge"
                             title="Filtrar entregas desta semana (até sexta-feira)" aria-label="Filtrar entregas desta semana (até sexta-feira)" aria-pressed="false">
                             Para Essa Semana
@@ -90,7 +102,7 @@
                                     <h2><i class="fas fa-hourglass-half"></i> Preparando Arte</h2>
                                     <div class="kanban-column-header-tools">
                                         <span class="kanban-column-count" data-count-for="pendente">0</span>
-                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="pendente" title="Organizar por data">
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-column-date" data-status="pendente" title="Organizar por data">
                                             <i class="fas fa-calendar-days" aria-hidden="true"></i>
                                         </button>
                                     </div>
@@ -103,7 +115,7 @@
                                     <h2><i class="fas fa-file-export"></i> Exportado/Arte Separada</h2>
                                     <div class="kanban-column-header-tools">
                                         <span class="kanban-column-count" data-count-for="exportando">0</span>
-                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="exportando" title="Organizar por data">
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-column-date" data-status="exportando" title="Organizar por data">
                                             <i class="fas fa-calendar-days" aria-hidden="true"></i>
                                         </button>
                                     </div>
@@ -116,7 +128,7 @@
                                     <h2><i class="fas fa-print"></i> Impresso/Fotolito Impresso</h2>
                                     <div class="kanban-column-header-tools">
                                         <span class="kanban-column-count" data-count-for="fila_impressao">0</span>
-                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="fila_impressao" title="Organizar por data">
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-column-date" data-status="fila_impressao" title="Organizar por data">
                                             <i class="fas fa-calendar-days" aria-hidden="true"></i>
                                         </button>
                                     </div>
@@ -129,7 +141,7 @@
                                     <h2><i class="fas fa-spray-can-sparkles"></i> Sublimando/Na Estamparia</h2>
                                     <div class="kanban-column-header-tools">
                                         <span class="kanban-column-count" data-count-for="sublimando">0</span>
-                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="sublimando" title="Organizar por data">
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-column-date" data-status="sublimando" title="Organizar por data">
                                             <i class="fas fa-calendar-days" aria-hidden="true"></i>
                                         </button>
                                     </div>
@@ -142,7 +154,7 @@
                                     <h2><i class="fas fa-shirt"></i> Costura/Em Revisão</h2>
                                     <div class="kanban-column-header-tools">
                                         <span class="kanban-column-count" data-count-for="na_costura">0</span>
-                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-date" data-status="na_costura" title="Organizar por data">
+                                        <button type="button" class="kanban-sort-date-btn" data-action="sort-column-date" data-status="na_costura" title="Organizar por data">
                                             <i class="fas fa-calendar-days" aria-hidden="true"></i>
                                         </button>
                                     </div>
@@ -177,6 +189,84 @@
                 <iframe id="kanbanViewFrame" class="kanban-view-modal-iframe" title="Visualização da Ficha"
                     loading="lazy"></iframe>
             </div>
+        </div>
+    </div>
+
+    <div id="kanbanCreateCardModal" class="kanban-create-modal" role="dialog" aria-modal="true"
+        aria-labelledby="kanbanCreateCardTitle" hidden aria-hidden="true">
+        <div class="kanban-create-modal-overlay" data-close-create-modal="true"></div>
+        <div class="kanban-create-modal-content" role="document">
+            <div class="kanban-create-modal-header">
+                <strong id="kanbanCreateCardTitle" class="kanban-create-modal-title">Novo Cartão Manual</strong>
+                <button type="button" id="btnCloseKanbanCreateModal" class="kanban-create-modal-close" title="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="kanbanCreateCardForm" class="kanban-create-modal-form">
+                <label class="kanban-create-modal-field">
+                    <span>Título do cartão</span>
+                    <input type="text" id="kanbanCreateTitulo" class="form-control" maxlength="120"
+                        placeholder="Ex.: Camisetas Evento Interno" required>
+                </label>
+                <label class="kanban-create-modal-field">
+                    <span>Data de entrega</span>
+                    <input type="date" id="kanbanCreateDataEntrega" class="form-control" required>
+                </label>
+                <label class="kanban-create-modal-field">
+                    <span>É evento?</span>
+                    <select id="kanbanCreateEvento" class="form-control">
+                        <option value="nao" selected>Não</option>
+                        <option value="sim">Sim</option>
+                    </select>
+                </label>
+                <label class="kanban-create-modal-field">
+                    <span>Tipo de arte</span>
+                    <select id="kanbanCreateArte" class="form-control">
+                        <option value="">Não informado</option>
+                        <option value="sem_personalizacao">Sem Personalização</option>
+                        <option value="sublimacao">Sublimação</option>
+                        <option value="serigrafia">Serigrafia</option>
+                        <option value="bordado">Bordado</option>
+                        <option value="dtf">DTF Têxtil</option>
+                        <option value="transfer">Transfer</option>
+                        <option value="sublimacao_serigrafia">Sublimação e Serigrafia</option>
+                        <option value="serigrafia_dtf">Serigrafia e DTF</option>
+                        <option value="serigrafia_bordado">Serigrafia e Bordado</option>
+                    </select>
+                </label>
+                <label class="kanban-create-modal-field">
+                    <span>Tecido</span>
+                    <input type="text" id="kanbanCreateTecido" class="form-control" maxlength="120"
+                        placeholder="Ex.: Helanca">
+                </label>
+                <label class="kanban-create-modal-field">
+                    <span>Etapa inicial</span>
+                    <select id="kanbanCreateEtapa" class="form-control">
+                        <option value="pendente" selected>Preparando Arte</option>
+                        <option value="exportando">Exportado/Arte Separada</option>
+                        <option value="fila_impressao">Impresso/Fotolito Impresso</option>
+                        <option value="sublimando">Sublimando/Na Estamparia</option>
+                        <option value="na_costura">Costura/Em Revisão</option>
+                    </select>
+                </label>
+                <label class="kanban-create-modal-field">
+                    <span>Status do cartão</span>
+                    <select id="kanbanCreateSupplyStatus" class="form-control">
+                        <option value="tudo_ok" selected>Tudo ok</option>
+                        <option value="sem_tecido">Sem tecido</option>
+                        <option value="sem_tinta">Sem tinta</option>
+                        <option value="sem_papel">Sem papel</option>
+                        <option value="pendencias">Pendências</option>
+                    </select>
+                </label>
+                <div class="kanban-create-modal-actions">
+                    <button type="button" id="btnCancelKanbanCreateModal" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" id="btnSubmitKanbanCreateModal" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        <span>Criar cartão</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

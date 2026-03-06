@@ -1,6 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
+
 :root {
-  --font-family-sans: "Soehne", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-family-display: "Soehne", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-family-sans: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-family-display: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-family-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   --font-family-base: var(--font-family-sans);
 
