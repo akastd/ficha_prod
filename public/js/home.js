@@ -529,7 +529,7 @@
         : '';
 
       return `
-        <a class="home-upcoming-item" href="/ficha?visualizar=${id}" data-id="${id}">
+        <a class="home-upcoming-item" href="/ficha?visualizar=${id}" data-id="${id}" data-skip-nav-intercept="true">
           <div class="home-upcoming-main">
             <strong>${cliente}</strong>
             <span class="home-upcoming-sub">Ficha #${id} • Entrega: ${entrega}</span>

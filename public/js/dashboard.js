@@ -454,7 +454,7 @@
       </div>
       <div class="ficha-main">
         <div class="ficha-header">
-          <a class="ficha-cliente ficha-cliente-link" href="/ficha?visualizar=${ficha.id}" data-id="${ficha.id}" title="Visualizar ficha">
+          <a class="ficha-cliente ficha-cliente-link" href="/ficha?visualizar=${ficha.id}" data-id="${ficha.id}" data-skip-nav-intercept="true" title="Visualizar ficha">
             ${clienteFormatado || 'Cliente não informado'}
           </a>
           ${diasAtraso > 0 ? `

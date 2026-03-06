@@ -254,6 +254,7 @@
 
     const anchor = target.closest('a[href]');
     if (!anchor || anchor.hasAttribute('download')) return;
+    if (anchor.hasAttribute('data-skip-nav-intercept')) return;
 
     const targetAttr = String(anchor.getAttribute('target') || '').toLowerCase();
     if (targetAttr && targetAttr !== '_self') return;
