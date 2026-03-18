@@ -229,6 +229,65 @@ function extrairTextoProdutosBusca(produtosRaw) {
   )).join(' ');
 }
 
+function extractFirstImageSrcFromArray(items) {
+  if (!Array.isArray(items) || items.length === 0) return '';
+
+  for (const item of items) {
+    if (typeof item === 'string') {
+      const value = item.trim();
+      if (value) return value;
+      continue;
+    }
+
+    if (item && typeof item === 'object') {
+      const value = String(item.src || item.url || '').trim();
+      if (value) return value;
+    }
+  }
+
+  return '';
+}
+
+function extractFichaThumbSrc(ficha) {
+  const raw = ficha?.imagens_data;
+  const parsedImages = (() => {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw !== 'string') return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  })();
+
+  const fromImages = extractFirstImageSrcFromArray(parsedImages);
+  if (fromImages) return fromImages;
+
+  const single = String(ficha?.imagem_data || '').trim();
+  return single || '';
+}
+
+function summarizeFicha(ficha) {
+  return {
+    id: ficha.id,
+    cliente: ficha.cliente,
+    vendedor: ficha.vendedor,
+    data_inicio: ficha.data_inicio,
+    numero_venda: ficha.numero_venda,
+    data_entrega: ficha.data_entrega,
+    status: ficha.status,
+    evento: ficha.evento,
+    arte: ficha.arte,
+    produtos: ficha.produtos,
+    material: ficha.material,
+    kanban_status: ficha.kanban_status,
+    kanban_ordem: ficha.kanban_ordem,
+    thumbSrc: extractFichaThumbSrc(ficha)
+  };
+}
+
 function fichaCorrespondeTermoBusca(ficha, termo) {
   const termoNormalizado = normalizarTextoBusca(termo);
   if (!termoNormalizado) return true;
@@ -248,6 +307,12 @@ function fichaCorrespondeTermoBusca(ficha, termo) {
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+function setShortCdnCache(res, seconds = 30) {
+  const safeSeconds = Math.max(1, Number(seconds) || 30);
+  const staleSeconds = Math.max(safeSeconds * 4, safeSeconds + 30);
+  res.setHeader('Cache-Control', `public, max-age=0, s-maxage=${safeSeconds}, stale-while-revalidate=${staleSeconds}`);
+}
 
 
 // Servir arquivos estáticos
@@ -1481,6 +1546,7 @@ app.use('/api', async (req, res, next) => {
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
+    setShortCdnCache(res, 15);
     await executeDb('SELECT 1');
     res.json({ status: 'ok', database: 'turso connected' });
   } catch (error) {
@@ -1522,27 +1588,14 @@ app.get('/api/fichas', async (req, res) => {
         'status',
         'evento',
         'arte',
+        'material',
+        'kanban_status',
+        'kanban_ordem',
         'imagem_data',
         'imagens_data',
         'produtos'
       ].join(', ')
       : '*';
-    const resumoColumns = resumido
-      ? [
-        'id',
-        'cliente',
-        'vendedor',
-        'data_inicio',
-        'numero_venda',
-        'data_entrega',
-        'status',
-        'evento',
-        'arte',
-        'imagem_data',
-        'imagens_data',
-        'produtos'
-      ]
-      : [];
 
     let whereClause = ' WHERE 1=1';
     const params = [];
@@ -1592,13 +1645,9 @@ app.get('/api/fichas', async (req, res) => {
       }
       return registro;
     });
-    const resumirFicha = ficha => {
-      if (!resumido) return ficha;
-      return resumoColumns.reduce((acc, key) => {
-        acc[key] = ficha[key];
-        return acc;
-      }, {});
-    };
+    const resumirFicha = ficha => (resumido ? summarizeFicha(ficha) : ficha);
+
+    setShortCdnCache(res, termo ? 15 : 30);
 
     if (paged) {
       const safePageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
@@ -1981,6 +2030,7 @@ app.patch('/api/fichas/:id/pendente', async (req, res) => {
 });
 
 app.get('/api/system-status', async (req, res) => {
+  setShortCdnCache(res, 60);
   const [
     tursoStatus,
     cloudinaryStatus,
@@ -2218,6 +2268,7 @@ app.post('/api/system-log', async (req, res) => {
 
 app.get('/api/clientes', async (req, res) => {
   try {
+    setShortCdnCache(res, 120);
     const queryData = parseWithZod(res, clientesQuerySchema, req.query, 'Parâmetros de busca de clientes inválidos');
     if (!queryData) return;
 
@@ -2243,6 +2294,7 @@ app.get('/api/clientes', async (req, res) => {
 // Listar todos os clientes com detalhes
 app.get('/api/clientes/lista', async (req, res) => {
   try {
+    setShortCdnCache(res, 120);
     const clientes = await dbAll(`
       SELECT 
         c.id, 
@@ -2359,6 +2411,7 @@ app.delete('/api/clientes/:id', async (req, res) => {
 
 app.get('/api/relatorio-clientes', async (req, res) => {
   try {
+    setShortCdnCache(res, 60);
     const queryData = parseWithZod(res, relatorioClientesListQuerySchema, req.query, 'Parâmetros de relatório de clientes inválidos');
     if (!queryData) return;
 
@@ -2433,6 +2486,7 @@ app.get('/api/relatorio-clientes', async (req, res) => {
 
 app.get('/api/relatorio-clientes/:id', async (req, res) => {
   try {
+    setShortCdnCache(res, 60);
     const paramsData = parseWithZod(res, positiveIdParamSchema, req.params, 'ID do cliente inválido');
     if (!paramsData) return;
     const queryData = parseWithZod(res, relatorioClienteDetalheQuerySchema, req.query, 'Parâmetros de período inválidos');
@@ -2618,6 +2672,7 @@ app.get('/api/relatorio-clientes/:id', async (req, res) => {
 // Estatísticas gerais
 app.get('/api/estatisticas', async (req, res) => {
   try {
+    setShortCdnCache(res, 60);
     const stats = {};
 
     const totalFichas = await dbGet('SELECT COUNT(*) as total FROM fichas');
@@ -2665,6 +2720,7 @@ app.get('/api/estatisticas', async (req, res) => {
 
 // Obter configuração pública do Cloudinary
 app.get('/api/cloudinary/config', (req, res) => {
+  setShortCdnCache(res, 3600);
   res.json({
     cloudName: CLOUDINARY_CONFIG.cloudName,
     apiKey: CLOUDINARY_CONFIG.apiKey,

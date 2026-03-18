@@ -10,7 +10,6 @@
   const FICHA_FALLBACK_STORAGE_KEY = 'fichas_nao_salvas_fallback_v1';
   const FALLBACK_LIST_LIMIT = 8;
 
-  let intervalId = null;
   let previewModal = null;
   let previewIframe = null;
   let previewFichaId = null;
@@ -833,7 +832,7 @@
   }
 
   async function fetchJson(url) {
-    const response = await fetch(url, { cache: 'no-store' });
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   }
@@ -843,8 +842,8 @@
 
     const [statsRes, fichasRes, pendentesRes] = await Promise.allSettled([
       fetchJson('/api/estatisticas'),
-      fetchJson('/api/fichas'),
-      fetchJson('/api/fichas?status=pendente')
+      fetchJson('/api/fichas?resumido=1'),
+      fetchJson('/api/fichas?status=pendente&resumido=1')
     ]);
 
     if (statsRes.status === 'fulfilled') {
@@ -906,10 +905,6 @@
       renderFallbacks();
     });
 
-    if (intervalId) window.clearInterval(intervalId);
-    intervalId = window.setInterval(() => {
-      loadHubData().catch(() => {});
-    }, REFRESH_INTERVAL_MS);
   }
 
   if (document.readyState === 'loading') {

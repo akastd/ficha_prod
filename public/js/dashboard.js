@@ -1395,6 +1395,9 @@
   }
 
   function obterMiniaturaFicha(ficha) {
+    const thumbSrc = String(ficha.thumbSrc || ficha.thumb_src || '').trim();
+    if (thumbSrc) return thumbSrc;
+
     const imagens = extrairImagensFicha(ficha);
     if (!Array.isArray(imagens) || imagens.length === 0) return '';
 

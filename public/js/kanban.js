@@ -237,8 +237,6 @@
 
     document.addEventListener('keydown', handleGlobalKeydown);
     document.addEventListener('click', handleDocumentClick);
-    document.addEventListener('visibilitychange', handleVisibilityRefreshTrigger);
-    window.addEventListener('focus', handleWindowFocusRefresh);
 
     document.querySelectorAll('.kanban-column').forEach(column => {
       column.addEventListener('dragenter', handleDragEnterColumn);
@@ -499,52 +497,12 @@
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
   }
 
-  function handleVisibilityRefreshTrigger() {
-    if (document.visibilityState === 'hidden') {
-      state.lastHiddenAt = Date.now();
-      return;
-    }
-
-    const awayMs = Date.now() - Number(state.lastHiddenAt || 0);
-    if (awayMs < TAB_RETURN_REFRESH_MIN_AWAY_MS) return;
-
-    refreshBoardFromReturn().catch(error => {
-      console.error('Erro ao autoatualizar Kanban ao voltar para a aba:', error);
-    });
-  }
-
-  function handleWindowFocusRefresh() {
-    if (document.visibilityState === 'hidden') return;
-
-    const awayMs = Date.now() - Number(state.lastHiddenAt || 0);
-    if (awayMs < TAB_RETURN_REFRESH_MIN_AWAY_MS) return;
-
-    refreshBoardFromReturn().catch(error => {
-      console.error('Erro ao autoatualizar Kanban ao recuperar foco:', error);
-    });
-  }
-
-  async function refreshBoardFromReturn() {
-    if (state.isLoading) return;
-
-    const now = Date.now();
-    if (now - Number(state.lastAutoRefreshAt || 0) < TAB_RETURN_REFRESH_COOLDOWN_MS) return;
-
-    state.lastAutoRefreshAt = now;
-    await carregarFichas();
-    renderKanban();
-
-    if (typeof window.mostrarInfo === 'function') {
-      window.mostrarInfo('Quadro atualizado automaticamente');
-    }
-  }
-
   async function carregarFichas() {
     state.isLoading = true;
     renderKanban();
 
     try {
-      const fichas = await db.listarFichas();
+      const fichas = await db.listarFichas({ resumido: true });
       const fichasApi = (Array.isArray(fichas) ? fichas : []).map(normalizeFichaKanbanStatus);
       const manualCards = Array.isArray(state.manualCards)
         ? state.manualCards.map(normalizeFichaKanbanStatus)
@@ -2076,6 +2034,9 @@
 
   function getFichaThumbnailSrc(ficha) {
     if (!ficha || typeof ficha !== 'object') return '';
+
+    const thumbSrc = String(ficha.thumbSrc || ficha.thumb_src || '').trim();
+    if (thumbSrc) return thumbSrc;
 
     const directList = Array.isArray(ficha.imagens) ? ficha.imagens : [];
     const fromDirect = getFirstImageSrcFromArray(directList);

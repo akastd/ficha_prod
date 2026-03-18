@@ -56,8 +56,18 @@ class APIClient {
 
   // Fichas
 
-  async listarFichas() {
-    const response = await fetch(`${this.baseURL}/fichas`);
+  async listarFichas(options = {}) {
+    const params = new URLSearchParams();
+    if (options.resumido === true) {
+      params.set('resumido', '1');
+    }
+    if (options.status) {
+      params.set('status', String(options.status));
+    }
+
+    const query = params.toString();
+    const url = query ? `${this.baseURL}/fichas?${query}` : `${this.baseURL}/fichas`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Erro ao listar fichas');
     return response.json();
   }
