@@ -943,8 +943,8 @@ body.kanban-modal-open {
     max-height: min(90vh, 920px);
     border-radius: var(--radius-2xl);
     overflow: hidden;
-    border: 1px solid var(--color-neutral-200);
-    background: var(--color-neutral-0);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
     box-shadow: var(--shadow-xl);
     display: flex;
     flex-direction: column;
@@ -956,8 +956,8 @@ body.kanban-modal-open {
     justify-content: space-between;
     gap: var(--space-12);
     padding: 10px 12px;
-    background: linear-gradient(180deg, var(--color-surface-soft), var(--color-neutral-100));
-    border-bottom: 1px solid var(--color-neutral-200);
+    background: linear-gradient(180deg, var(--color-surface-soft), var(--color-surface));
+    border-bottom: 1px solid var(--color-border);
 }
 
 .kanban-view-modal-title-wrap {
@@ -968,22 +968,22 @@ body.kanban-modal-open {
 
 .kanban-view-modal-title {
     font-size: var(--font-size-md);
-    color: var(--color-neutral-900);
+    color: var(--color-text);
     line-height: 1.2;
 }
 
 .kanban-view-modal-subtitle {
     font-size: var(--font-size-sm);
-    color: var(--color-neutral-600);
+    color: var(--color-text-muted);
 }
 
 .kanban-view-modal-close {
     width: 30px;
     height: 30px;
     border-radius: var(--radius-md);
-    border: 1px solid var(--color-neutral-200);
-    background: var(--color-neutral-0);
-    color: var(--color-neutral-800);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -993,7 +993,7 @@ body.kanban-modal-open {
 
 .kanban-view-modal-close:hover {
     background: var(--color-surface-soft);
-    border-color: var(--color-neutral-400);
+    border-color: var(--color-border);
 }
 
 .kanban-view-modal-close:focus-visible {
@@ -1013,9 +1013,9 @@ body.kanban-modal-open {
     height: 100%;
     min-height: 0;
     overflow: auto;
-    border: 1px solid var(--color-neutral-200);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
-    background: var(--color-neutral-0);
+    background: var(--color-surface);
     transition: opacity 0.2s ease;
 }
 
@@ -1023,13 +1023,13 @@ body.kanban-modal-open {
     position: absolute;
     inset: 12px;
     border-radius: var(--radius-lg);
-    border: 1px solid var(--color-neutral-200);
-    background: linear-gradient(180deg, var(--color-surface-soft), var(--color-neutral-100));
+    border: 1px solid var(--color-border);
+    background: linear-gradient(180deg, var(--color-surface-soft), var(--color-surface));
     display: none;
     align-items: center;
     justify-content: center;
     gap: var(--space-10);
-    color: var(--color-neutral-800);
+    color: var(--color-text);
     font-size: 0.9rem;
     font-weight: 600;
     z-index: 2;
@@ -1051,8 +1051,8 @@ body.kanban-modal-open {
     justify-content: flex-end;
     gap: var(--space-8);
     padding: var(--space-12);
-    border-top: 1px solid var(--color-neutral-200);
-    background: var(--color-neutral-0);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
 }
 
 .kanban-view-details {
@@ -1073,7 +1073,7 @@ body.kanban-modal-open {
     border-radius: var(--radius-xl);
     overflow: hidden;
     background: var(--color-surface-soft);
-    border: 1px solid var(--color-neutral-200);
+    border: 1px solid var(--color-border);
     min-height: 220px;
 }
 
@@ -1102,7 +1102,7 @@ body.kanban-modal-open {
     min-height: 30px;
     padding: 0 var(--space-10);
     border-radius: var(--radius-pill);
-    border: 1px solid var(--color-neutral-200);
+    border: 1px solid var(--color-border);
     background: var(--color-surface-soft);
     color: var(--color-text);
     font-size: var(--font-size-sm);
@@ -1118,7 +1118,7 @@ body.kanban-modal-open {
 
 .kanban-view-grid div {
     padding: var(--space-10);
-    border: 1px solid var(--color-neutral-200);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: var(--color-surface-soft);
 }
@@ -1143,7 +1143,7 @@ body.kanban-modal-open {
     flex-direction: column;
     gap: var(--space-8);
     padding: var(--space-12);
-    border: 1px solid var(--color-neutral-200);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
     background: var(--color-surface-soft);
 }

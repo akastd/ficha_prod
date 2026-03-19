@@ -1803,7 +1803,9 @@ app.get('/api/fichas', async (req, res) => {
         'material',
         'kanban_status',
         'kanban_ordem',
-        'produtos'
+        'produtos',
+        'imagens_data',
+        'imagem_data'
       ].join(', ')
       : '*';
 
